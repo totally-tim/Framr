@@ -176,7 +176,7 @@ export default function App() {
         <div className="flex items-center gap-2">
           <ThemeToggle theme={theme} onToggle={toggleTheme} />
           <a
-            href="https://github.com"
+            href="https://github.com/totally-tim/framr"
             target="_blank"
             rel="noopener noreferrer"
             className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
