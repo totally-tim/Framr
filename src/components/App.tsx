@@ -10,6 +10,8 @@ import { ControlPanel } from './ControlPanel';
 import { PresetButtons } from './PresetButtons';
 import { DownloadPanel } from './DownloadPanel';
 import { ThemeToggle } from './ThemeToggle';
+import { MobileDrawer } from './MobileDrawer';
+import { MobileActionBar } from './MobileActionBar';
 
 const DEFAULT_BORDER_SETTINGS: BorderSettings = {
   width: 5,
@@ -38,6 +40,8 @@ export default function App() {
   const [outputSettings, setOutputSettings] = useState<OutputSettings>(DEFAULT_OUTPUT_SETTINGS);
   const [results, setResults] = useState<ProcessingResult[]>([]);
   const [memoryWarning, setMemoryWarning] = useState(false);
+  const [isImagesDrawerOpen, setIsImagesDrawerOpen] = useState(false);
+  const [isControlsDrawerOpen, setIsControlsDrawerOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -176,7 +180,7 @@ export default function App() {
         <div className="flex items-center gap-2">
           <ThemeToggle theme={theme} onToggle={toggleTheme} />
           <a
-            href="https://github.com"
+            href="https://github.com/totally-tim/framr"
             target="_blank"
             rel="noopener noreferrer"
             className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -189,7 +193,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+      <main className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {!hasImages ? (
           <div className="flex-1 flex items-center justify-center p-4 md:p-8">
             <div className="w-full max-w-2xl">
@@ -198,7 +202,8 @@ export default function App() {
           </div>
         ) : (
           <>
-            <aside className="w-full lg:w-72 xl:w-80 border-b lg:border-b-0 lg:border-r bg-surface-light dark:bg-surface-dark flex flex-col max-h-[40vh] lg:max-h-none overflow-hidden">
+            {/* Desktop sidebar - hidden on mobile */}
+            <aside className="hidden md:flex w-72 xl:w-80 border-r bg-surface-light dark:bg-surface-dark flex-col overflow-hidden">
               <div className="flex-1 overflow-hidden flex flex-col">
                 <ImageQueue
                   images={images}
@@ -210,7 +215,7 @@ export default function App() {
                 />
               </div>
 
-              <div className="p-4 border-t space-y-4 overflow-y-auto max-h-[50vh] lg:max-h-none scrollbar-thin">
+              <div className="p-4 border-t space-y-4 overflow-y-auto scrollbar-thin">
                 <ControlPanel
                   borderSettings={borderSettings}
                   resizeSettings={resizeSettings}
@@ -233,7 +238,8 @@ export default function App() {
               </div>
             </aside>
 
-            <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Main preview area */}
+            <div className="flex-1 flex flex-col overflow-hidden pb-16 md:pb-0">
               <div className="flex-1 overflow-hidden">
                 <PreviewCanvas
                   image={selectedImage}
@@ -242,7 +248,8 @@ export default function App() {
                 />
               </div>
 
-              <div className="p-4 border-t bg-surface-light dark:bg-surface-dark">
+              {/* Desktop presets - hidden on mobile */}
+              <div className="hidden md:block p-4 border-t bg-surface-light dark:bg-surface-dark">
                 <PresetButtons
                   currentSettings={borderSettings}
                   onApply={setBorderSettings}
@@ -255,11 +262,82 @@ export default function App() {
                 </div>
               )}
             </div>
+
+            {/* Mobile action bar */}
+            {hasImages && (
+              <MobileActionBar
+                images={images}
+                isProcessing={isProcessing}
+                progress={progress}
+                onProcess={handleProcess}
+                onCancel={handleCancel}
+                onOpenImages={() => setIsImagesDrawerOpen(true)}
+                onOpenControls={() => setIsControlsDrawerOpen(true)}
+                imageCount={images.length}
+              />
+            )}
+
+            {/* Mobile Images Drawer */}
+            <MobileDrawer
+              isOpen={isImagesDrawerOpen}
+              onClose={() => setIsImagesDrawerOpen(false)}
+              title={`Images (${images.length})`}
+            >
+              <div className="space-y-4">
+                <ImageQueue
+                  images={images}
+                  selectedId={selectedId}
+                  onSelect={(id) => {
+                    setSelectedId(id);
+                    setIsImagesDrawerOpen(false);
+                  }}
+                  onRemove={handleRemoveImage}
+                  onAddMore={handleAddMore}
+                  onClearAll={handleClearAll}
+                />
+              </div>
+            </MobileDrawer>
+
+            {/* Mobile Controls Drawer */}
+            <MobileDrawer
+              isOpen={isControlsDrawerOpen}
+              onClose={() => setIsControlsDrawerOpen(false)}
+              title="Settings"
+            >
+              <div className="space-y-6">
+                <ControlPanel
+                  borderSettings={borderSettings}
+                  resizeSettings={resizeSettings}
+                  outputSettings={outputSettings}
+                  onBorderChange={setBorderSettings}
+                  onResizeChange={setResizeSettings}
+                  onOutputChange={setOutputSettings}
+                />
+
+                <div className="border-t pt-4">
+                  <PresetButtons
+                    currentSettings={borderSettings}
+                    onApply={setBorderSettings}
+                  />
+                </div>
+
+                <div className="border-t pt-4">
+                  <DownloadPanel
+                    images={images}
+                    results={results}
+                    isProcessing={isProcessing}
+                    progress={progress}
+                    onProcess={handleProcess}
+                    onCancel={handleCancel}
+                  />
+                </div>
+              </div>
+            </MobileDrawer>
           </>
         )}
       </main>
 
-      <footer className="py-2 px-4 border-t text-center text-xs text-gray-500 dark:text-gray-400 bg-surface-light dark:bg-surface-dark">
+      <footer className="hidden md:block py-2 px-4 border-t text-center text-xs text-gray-500 dark:text-gray-400 bg-surface-light dark:bg-surface-dark">
         Framr - Add borders to your images. All processing happens in your browser.
       </footer>
     </div>
