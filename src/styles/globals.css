@@ -116,3 +116,24 @@
     linear-gradient(45deg, transparent 75%, #333 75%),
     linear-gradient(-45deg, transparent 75%, #333 75%);
 }
+
+/* Mobile drawer animations */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+/* Safe area padding for mobile devices with notches */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
