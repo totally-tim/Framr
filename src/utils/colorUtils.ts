@@ -39,12 +39,21 @@ export function getContrastColor(hex: string): string {
 }
 
 export const PRESET_COLORS = [
-  { name: 'White', value: '#FFFFFF' },
   { name: 'Black', value: '#000000' },
-  { name: 'Light Gray', value: '#F5F5F5' },
-  { name: 'Dark Gray', value: '#333333' },
-  { name: 'Warm White', value: '#FFFEF0' },
-  { name: 'Cool White', value: '#F0F8FF' },
-  { name: 'Ivory', value: '#FFFFF0' },
   { name: 'Charcoal', value: '#1A1A1A' },
+  { name: 'Dark Gray', value: '#333333' },
+  { name: 'Light Gray', value: '#F5F5F5' },
+  { name: 'Cool White', value: '#F0F8FF' },
+  { name: 'Warm White', value: '#FFFEF0' },
+  { name: 'Ivory', value: '#FFFFF0' },
+  { name: 'White', value: '#FFFFFF' },
+];
+
+export const CANVAS_BACKGROUND_COLORS = [
+  { name: 'Black', value: '#000000' },
+  { name: 'Dark Gray', value: '#333333' },
+  { name: 'Medium Gray', value: '#808080' },
+  { name: 'Light Gray', value: '#C0C0C0' },
+  { name: 'Off White', value: '#F5F5F5' },
+  { name: 'White', value: '#FFFFFF' },
 ];

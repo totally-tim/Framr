@@ -1,26 +1,31 @@
 import { useState, useCallback } from 'react';
-import type { BorderSettings, ResizeSettings, OutputSettings } from '../types';
-import { PRESET_COLORS, isValidHex, normalizeHex } from '../utils/colorUtils';
+import type { BorderSettings, ResizeSettings, OutputSettings, CanvasBackground } from '../types';
+import { PRESET_COLORS, CANVAS_BACKGROUND_COLORS, isValidHex, normalizeHex } from '../utils/colorUtils';
 
 interface ControlPanelProps {
   borderSettings: BorderSettings;
   resizeSettings: ResizeSettings;
   outputSettings: OutputSettings;
+  canvasBackground: CanvasBackground;
   onBorderChange: (settings: BorderSettings) => void;
   onResizeChange: (settings: ResizeSettings) => void;
   onOutputChange: (settings: OutputSettings) => void;
+  onCanvasBackgroundChange: (settings: CanvasBackground) => void;
 }
 
 export function ControlPanel({
   borderSettings,
   resizeSettings,
   outputSettings,
+  canvasBackground,
   onBorderChange,
   onResizeChange,
   onOutputChange,
+  onCanvasBackgroundChange,
 }: ControlPanelProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [colorInput, setColorInput] = useState(borderSettings.color);
+  const [canvasBgInput, setCanvasBgInput] = useState(canvasBackground.color);
 
   const handleWidthChange = useCallback((value: number) => {
     onBorderChange({ ...borderSettings, width: value });
@@ -47,6 +52,35 @@ export function ControlPanel({
     setColorInput(color);
     onBorderChange({ ...borderSettings, color });
   }, [borderSettings, onBorderChange]);
+
+  const handleCanvasBgColorChange = useCallback((color: string) => {
+    setCanvasBgInput(color);
+    if (isValidHex(color)) {
+      onCanvasBackgroundChange({ ...canvasBackground, color: normalizeHex(color) });
+    }
+  }, [canvasBackground, onCanvasBackgroundChange]);
+
+  const handleCanvasBgInputBlur = useCallback(() => {
+    if (isValidHex(canvasBgInput)) {
+      const normalized = normalizeHex(canvasBgInput);
+      setCanvasBgInput(normalized);
+      onCanvasBackgroundChange({ ...canvasBackground, color: normalized });
+    } else {
+      setCanvasBgInput(canvasBackground.color);
+    }
+  }, [canvasBgInput, canvasBackground, onCanvasBackgroundChange]);
+
+  const handleCanvasBgPresetClick = useCallback((color: string) => {
+    setCanvasBgInput(color);
+    onCanvasBackgroundChange({ ...canvasBackground, color });
+  }, [canvasBackground, onCanvasBackgroundChange]);
+
+  const handleCanvasBgModeToggle = useCallback(() => {
+    onCanvasBackgroundChange({
+      ...canvasBackground,
+      mode: canvasBackground.mode === 'checkerboard' ? 'solid' : 'checkerboard',
+    });
+  }, [canvasBackground, onCanvasBackgroundChange]);
 
   return (
     <div className="space-y-6">
@@ -123,6 +157,72 @@ export function ControlPanel({
             ))}
           </div>
         </div>
+      </div>
+
+      <div className="space-y-4">
+        <h3 className="font-medium text-sm text-gray-700 dark:text-gray-200 uppercase tracking-wider">
+          Canvas Background
+        </h3>
+
+        <div className="flex items-center justify-between">
+          <label className="text-sm text-gray-600 dark:text-gray-300">Checkerboard</label>
+          <button
+            onClick={handleCanvasBgModeToggle}
+            className={`
+              relative w-11 h-6 rounded-full transition-colors
+              ${canvasBackground.mode === 'checkerboard' ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'}
+            `}
+          >
+            <span
+              className={`
+                absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform
+                ${canvasBackground.mode === 'checkerboard' ? 'translate-x-5' : ''}
+              `}
+            />
+          </button>
+        </div>
+
+        {canvasBackground.mode === 'solid' && (
+          <div className="space-y-3">
+            <label className="text-sm text-gray-600 dark:text-gray-300">Color</label>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={canvasBackground.color}
+                onChange={(e) => handleCanvasBgColorChange(e.target.value)}
+                className="w-10 h-10 rounded border cursor-pointer"
+              />
+              <input
+                type="text"
+                value={canvasBgInput}
+                onChange={(e) => handleCanvasBgColorChange(e.target.value)}
+                onBlur={handleCanvasBgInputBlur}
+                className="flex-1 px-3 py-2 text-sm rounded border bg-white dark:bg-gray-800 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="#808080"
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {CANVAS_BACKGROUND_COLORS.map((preset) => (
+                <button
+                  key={preset.value}
+                  onClick={() => handleCanvasBgPresetClick(preset.value)}
+                  className={`
+                    w-7 h-7 rounded border-2 transition-all
+                    ${canvasBackground.color === preset.value
+                      ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-gray-900'
+                      : 'hover:scale-110'
+                    }
+                  `}
+                  style={{ backgroundColor: preset.value }}
+                  title={preset.name}
+                  aria-label={preset.name}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="border-t pt-4">
