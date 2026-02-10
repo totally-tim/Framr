@@ -25,13 +25,14 @@ export function useImageProcessor() {
   const cancelledRef = useRef(false);
 
   useEffect(() => {
-    workerRef.current = new Worker(
+    const worker = new Worker(
       new URL('../workers/imageProcessor.worker.ts', import.meta.url),
       { type: 'module' }
     );
+    workerRef.current = worker;
 
     return () => {
-      workerRef.current?.terminate();
+      worker.terminate();
     };
   }, []);
 

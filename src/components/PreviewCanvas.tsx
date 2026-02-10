@@ -171,7 +171,7 @@ export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBac
     } finally {
       setIsLoading(false);
     }
-  }, [image, renderCanvas, previewMode, zoom, swapped]);
+  }, [image, renderCanvas, previewMode, zoom]);
 
   // Slider drag handlers
   const handleSliderMouseDown = useCallback((e: React.MouseEvent) => {
@@ -220,13 +220,6 @@ export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBac
   useLayoutEffect(() => {
     renderPreview();
   }, [renderPreview]);
-
-  // Force re-render when swapped changes (in case renderPreview reference didn't update)
-  useEffect(() => {
-    if (previewMode === 'slider') {
-      renderPreview();
-    }
-  }, [swapped, previewMode]);
 
   useEffect(() => {
     const handleResize = () => {

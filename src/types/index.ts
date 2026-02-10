@@ -58,7 +58,7 @@ export interface CanvasBackground {
 
 export interface WorkerMessage {
   type: 'process';
-  imageData: ImageData;
+  imageBitmap: ImageBitmap;
   config: ProcessingConfig;
   originalFormat: string;
   filename: string;

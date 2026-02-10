@@ -16,7 +16,7 @@ export const SUPPORTED_FORMATS = ['image/jpeg', 'image/png', 'image/tiff', 'imag
 export const MAX_PREVIEW_SIZE = 1200;
 
 export function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 }
 
 export function isValidImageType(file: File): boolean {
