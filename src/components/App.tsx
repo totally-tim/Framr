@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
-import type { ImageFile, BorderSettings, ResizeSettings, OutputSettings, ProcessingResult } from '../types';
-import { createImageFile, checkMemoryWarning } from '../utils/imageUtils';
+import type { ImageFile, BorderSettings, ResizeSettings, OutputSettings, ProcessingResult, CanvasBackground } from '../types';
+import { createImageFile, checkMemoryWarning, cleanupImageResources } from '../utils/imageUtils';
 import { useTheme } from '../hooks/useTheme';
 import { useImageProcessor } from '../hooks/useImageProcessor';
 import { DropZone } from './DropZone';
@@ -31,6 +31,11 @@ const DEFAULT_OUTPUT_SETTINGS: OutputSettings = {
   quality: 95,
 };
 
+const DEFAULT_CANVAS_BACKGROUND: CanvasBackground = {
+  mode: 'checkerboard',
+  color: '#808080',
+};
+
 export default function App() {
   const { theme, toggleTheme } = useTheme();
   const [images, setImages] = useState<ImageFile[]>([]);
@@ -38,6 +43,7 @@ export default function App() {
   const [borderSettings, setBorderSettings] = useState<BorderSettings>(DEFAULT_BORDER_SETTINGS);
   const [resizeSettings, setResizeSettings] = useState<ResizeSettings>(DEFAULT_RESIZE_SETTINGS);
   const [outputSettings, setOutputSettings] = useState<OutputSettings>(DEFAULT_OUTPUT_SETTINGS);
+  const [canvasBackground, setCanvasBackground] = useState<CanvasBackground>(DEFAULT_CANVAS_BACKGROUND);
   const [results, setResults] = useState<ProcessingResult[]>([]);
   const [memoryWarning, setMemoryWarning] = useState(false);
   const [isImagesDrawerOpen, setIsImagesDrawerOpen] = useState(false);
@@ -72,31 +78,55 @@ export default function App() {
         return updated;
       });
 
-      if (!selectedId && newImages.length > 0) {
-        setSelectedId(newImages[0].id);
-      }
+      // Use functional update to avoid dependency on selectedId
+      setSelectedId((prev) => prev ?? newImages[0].id);
     }
-  }, [selectedId]);
+  }, []);
 
   const handleRemoveImage = useCallback((id: string) => {
     setImages((prev) => {
+      // Find and clean up the removed image
+      const removedImage = prev.find((img) => img.id === id);
+      if (removedImage) {
+        cleanupImageResources(removedImage);
+      }
+      
       const updated = prev.filter((img) => img.id !== id);
       setMemoryWarning(checkMemoryWarning(updated));
+
+      // Update selectedId from within setImages to access latest list
+      setSelectedId((prevSelected) => {
+        if (prevSelected !== id) return prevSelected;
+        return updated.length > 0 ? updated[0].id : null;
+      });
+
       return updated;
     });
 
-    setResults((prev) => prev.filter((r) => r.imageId !== id));
-
-    if (selectedId === id) {
-      const remaining = images.filter((img) => img.id !== id);
-      setSelectedId(remaining.length > 0 ? remaining[0].id : null);
-    }
-  }, [images, selectedId]);
+    setResults((prev) => {
+      // Clean up blob from removed result
+      const removedResult = prev.find((r) => r.imageId === id);
+      if (removedResult) {
+        (removedResult as { blob?: Blob }).blob = undefined;
+      }
+      return prev.filter((r) => r.imageId !== id);
+    });
+  }, []);
 
   const handleClearAll = useCallback(() => {
-    setImages([]);
+    // Clean up all image and result resources before clearing
+    setImages((prev) => {
+      prev.forEach(cleanupImageResources);
+      return [];
+    });
+    setResults((prev) => {
+      prev.forEach((result) => {
+        (result as { blob?: Blob }).blob = undefined;
+      });
+      return [];
+    });
+    
     setSelectedId(null);
-    setResults([]);
     setMemoryWarning(false);
     resetState();
   }, [resetState]);
@@ -220,9 +250,11 @@ export default function App() {
                   borderSettings={borderSettings}
                   resizeSettings={resizeSettings}
                   outputSettings={outputSettings}
+                  canvasBackground={canvasBackground}
                   onBorderChange={setBorderSettings}
                   onResizeChange={setResizeSettings}
                   onOutputChange={setOutputSettings}
+                  onCanvasBackgroundChange={setCanvasBackground}
                 />
 
                 <div className="border-t pt-4">
@@ -245,6 +277,7 @@ export default function App() {
                   image={selectedImage}
                   borderSettings={borderSettings}
                   resizeSettings={resizeSettings}
+                  canvasBackground={canvasBackground}
                 />
               </div>
 
@@ -309,9 +342,11 @@ export default function App() {
                   borderSettings={borderSettings}
                   resizeSettings={resizeSettings}
                   outputSettings={outputSettings}
+                  canvasBackground={canvasBackground}
                   onBorderChange={setBorderSettings}
                   onResizeChange={setResizeSettings}
                   onOutputChange={setOutputSettings}
+                  onCanvasBackgroundChange={setCanvasBackground}
                 />
 
                 <div className="border-t pt-4">

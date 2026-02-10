@@ -49,9 +49,16 @@ export interface ProcessingResult {
   filename: string;
 }
 
+export type CanvasBackgroundMode = 'checkerboard' | 'solid';
+
+export interface CanvasBackground {
+  mode: CanvasBackgroundMode;
+  color: string;
+}
+
 export interface WorkerMessage {
   type: 'process';
-  imageData: ImageData;
+  imageBitmap: ImageBitmap;
   config: ProcessingConfig;
   originalFormat: string;
   filename: string;
@@ -66,3 +73,5 @@ export interface WorkerResponse {
   error?: string;
   progress?: number;
 }
+
+export type PreviewMode = 'processed' | 'original' | 'side-by-side' | 'slider';

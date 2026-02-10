@@ -1,42 +1,27 @@
 import type { BorderSettings, ResizeSettings, OutputSettings, ImageFile } from '../types';
 
+// Re-export shared utilities for convenience
+export {
+  getFileExtension,
+  getMimeType,
+  getExtensionFromMime,
+  calculateBorderSize,
+  calculateOutputDimensions,
+  generateOutputFilename,
+} from './imageProcessing';
+
+import { getFileExtension, getMimeType, calculateBorderSize, calculateOutputDimensions } from './imageProcessing';
+
 export const SUPPORTED_FORMATS = ['image/jpeg', 'image/png', 'image/tiff', 'image/webp'];
 export const MAX_PREVIEW_SIZE = 1200;
 
 export function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 }
 
 export function isValidImageType(file: File): boolean {
   return SUPPORTED_FORMATS.includes(file.type) ||
     /\.(jpe?g|png|tiff?|webp)$/i.test(file.name);
-}
-
-export function getFileExtension(filename: string): string {
-  const match = filename.match(/\.([^.]+)$/);
-  return match ? match[1].toLowerCase() : 'jpg';
-}
-
-export function getMimeType(format: string): string {
-  const types: Record<string, string> = {
-    jpg: 'image/jpeg',
-    jpeg: 'image/jpeg',
-    png: 'image/png',
-    webp: 'image/webp',
-    tiff: 'image/tiff',
-    tif: 'image/tiff',
-  };
-  return types[format.toLowerCase()] || 'image/jpeg';
-}
-
-export function getExtensionFromMime(mimeType: string): string {
-  const extensions: Record<string, string> = {
-    'image/jpeg': 'jpg',
-    'image/png': 'png',
-    'image/webp': 'webp',
-    'image/tiff': 'tiff',
-  };
-  return extensions[mimeType] || 'jpg';
 }
 
 export async function loadImage(file: File): Promise<HTMLImageElement> {
@@ -58,22 +43,67 @@ export async function loadImage(file: File): Promise<HTMLImageElement> {
   });
 }
 
-export async function createThumbnail(file: File, maxSize: number = 200): Promise<string> {
-  const img = await loadImage(file);
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d')!;
+export function createThumbnail(img: HTMLImageElement, maxSize: number = 200): Promise<string> {
+  return new Promise((resolve) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d')!;
 
-  const scale = Math.min(maxSize / img.width, maxSize / img.height, 1);
-  canvas.width = img.width * scale;
-  canvas.height = img.height * scale;
+    const scale = Math.min(maxSize / img.width, maxSize / img.height, 1);
+    canvas.width = img.width * scale;
+    canvas.height = img.height * scale;
 
-  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL('image/jpeg', 0.7);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          resolve(URL.createObjectURL(blob));
+        } else {
+          // Fallback to data URL if blob creation fails
+          resolve(canvas.toDataURL('image/jpeg', 0.7));
+        }
+      },
+      'image/jpeg',
+      0.7
+    );
+  });
+}
+
+/**
+ * Clean up resources associated with an image.
+ * Revokes object URLs and clears blob references to help garbage collection.
+ */
+export function cleanupImageResources(image: ImageFile): void {
+  // Revoke thumbnailUrl if it's an object URL (starts with 'blob:')
+  if (image.thumbnailUrl && image.thumbnailUrl.startsWith('blob:')) {
+    URL.revokeObjectURL(image.thumbnailUrl);
+  }
+  
+  // Clear processedBlob reference to help GC
+  if (image.processedBlob) {
+    (image as { processedBlob?: Blob }).processedBlob = undefined;
+  }
+}
+
+/**
+ * Clean up resources for multiple images and their associated results.
+ */
+export function cleanupAllImageResources(
+  images: ImageFile[],
+  results: { imageId: string; blob: Blob }[]
+): void {
+  // Clean up image resources
+  images.forEach(cleanupImageResources);
+  
+  // Clear result blob references
+  results.forEach(result => {
+    (result as { blob?: Blob }).blob = undefined;
+  });
 }
 
 export async function createImageFile(file: File): Promise<ImageFile> {
   const img = await loadImage(file);
-  const thumbnailUrl = await createThumbnail(file);
+  const thumbnailUrl = await createThumbnail(img);
 
   return {
     id: generateId(),
@@ -83,77 +113,6 @@ export async function createImageFile(file: File): Promise<ImageFile> {
     originalHeight: img.height,
     thumbnailUrl,
     status: 'pending',
-  };
-}
-
-export function calculateBorderSize(
-  imageWidth: number,
-  imageHeight: number,
-  borderSettings: BorderSettings
-): { top: number; right: number; bottom: number; left: number } {
-  const { width, widthUnit, aspectAware } = borderSettings;
-
-  let borderSize: number;
-
-  if (widthUnit === '%') {
-    const baseSize = Math.min(imageWidth, imageHeight);
-    borderSize = Math.round(baseSize * (width / 100));
-  } else {
-    borderSize = width;
-  }
-
-  if (aspectAware) {
-    const aspectRatio = imageWidth / imageHeight;
-    if (aspectRatio > 1) {
-      const verticalBorder = borderSize;
-      const horizontalBorder = Math.round(borderSize * aspectRatio);
-      return { top: verticalBorder, right: horizontalBorder, bottom: verticalBorder, left: horizontalBorder };
-    } else if (aspectRatio < 1) {
-      const horizontalBorder = borderSize;
-      const verticalBorder = Math.round(borderSize / aspectRatio);
-      return { top: verticalBorder, right: horizontalBorder, bottom: verticalBorder, left: horizontalBorder };
-    }
-  }
-
-  return { top: borderSize, right: borderSize, bottom: borderSize, left: borderSize };
-}
-
-export function calculateOutputDimensions(
-  originalWidth: number,
-  originalHeight: number,
-  resizeSettings: ResizeSettings
-): { width: number; height: number } {
-  if (!resizeSettings.enabled) {
-    return { width: originalWidth, height: originalHeight };
-  }
-
-  let targetWidth = resizeSettings.width;
-  let targetHeight = resizeSettings.height;
-
-  if (resizeSettings.unit === '%') {
-    if (targetWidth) targetWidth = Math.round(originalWidth * (targetWidth / 100));
-    if (targetHeight) targetHeight = Math.round(originalHeight * (targetHeight / 100));
-  }
-
-  if (resizeSettings.maintainAspect) {
-    const aspectRatio = originalWidth / originalHeight;
-
-    if (targetWidth && !targetHeight) {
-      targetHeight = Math.round(targetWidth / aspectRatio);
-    } else if (targetHeight && !targetWidth) {
-      targetWidth = Math.round(targetHeight * aspectRatio);
-    } else if (targetWidth && targetHeight) {
-      const widthRatio = targetWidth / originalWidth;
-      const heightRatio = targetHeight / originalHeight;
-      const ratio = Math.min(widthRatio, heightRatio);
-      targetWidth = Math.round(originalWidth * ratio);
-      targetHeight = Math.round(originalHeight * ratio);
-    }
-  }
-
-  return {
-    width: targetWidth || originalWidth,
-    height: targetHeight || originalHeight,
   };
 }
 
@@ -218,22 +177,6 @@ export function canvasToBlob(
       quality
     );
   });
-}
-
-export function generateOutputFilename(
-  originalName: string,
-  outputSettings: OutputSettings
-): string {
-  const baseName = originalName.replace(/\.[^.]+$/, '');
-  let extension: string;
-
-  if (outputSettings.format === 'original') {
-    extension = getFileExtension(originalName);
-  } else {
-    extension = outputSettings.format === 'jpeg' ? 'jpg' : outputSettings.format;
-  }
-
-  return `${baseName}_bordered.${extension}`;
 }
 
 export function formatFileSize(bytes: number): string {

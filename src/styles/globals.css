@@ -1,6 +1,18 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@source "../**/*.{js,ts,jsx,tsx}";
+
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-surface-light: #FFFFFF;
+  --color-surface-dark: #1A1A1A;
+  --color-background-light: #FAFAFA;
+  --color-background-dark: #0F0F0F;
+  --color-border-light: #E5E7EB;
+  --color-border-dark: #2D2D2D;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Monaco', 'Consolas', monospace;
+}
 
 @layer base {
   html {
@@ -25,11 +37,17 @@
   }
 
   .btn-primary {
-    @apply btn bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800;
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-150;
+    @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800;
   }
 
   .btn-secondary {
-    @apply btn bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white;
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-150;
+    @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white;
     @apply hover:bg-gray-300 dark:hover:bg-gray-600;
   }
 
@@ -51,35 +69,31 @@
 
   .slider::-webkit-slider-thumb {
     @apply appearance-none w-4 h-4 rounded-full bg-blue-600 cursor-pointer;
-    @apply hover:bg-blue-700 transition-colors;
   }
 
   .slider::-moz-range-thumb {
     @apply w-4 h-4 rounded-full bg-blue-600 cursor-pointer border-0;
-    @apply hover:bg-blue-700 transition-colors;
   }
 }
 
-@layer utilities {
-  .scrollbar-thin {
-    scrollbar-width: thin;
-    scrollbar-color: theme('colors.gray.400') transparent;
-  }
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-gray-400) transparent;
 
-  .scrollbar-thin::-webkit-scrollbar {
+  &::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
 
-  .scrollbar-thin::-webkit-scrollbar-track {
+  &::-webkit-scrollbar-track {
     background: transparent;
   }
 
-  .scrollbar-thin::-webkit-scrollbar-thumb {
+  &::-webkit-scrollbar-thumb {
     @apply bg-gray-400 dark:bg-gray-600 rounded-full;
   }
 
-  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  &::-webkit-scrollbar-thumb:hover {
     @apply bg-gray-500 dark:bg-gray-500;
   }
 }
@@ -87,10 +101,10 @@
 /* Drop zone animation */
 @keyframes pulse-border {
   0%, 100% {
-    border-color: theme('colors.blue.400');
+    border-color: var(--color-blue-400);
   }
   50% {
-    border-color: theme('colors.blue.600');
+    border-color: var(--color-blue-600);
   }
 }
 
