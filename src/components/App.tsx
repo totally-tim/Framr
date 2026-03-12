@@ -127,6 +127,15 @@ export default function App() {
     });
   }, []);
 
+  const handleReorderImages = useCallback((fromIndex: number, toIndex: number) => {
+    setImages((prev) => {
+      const updated = [...prev];
+      const [removed] = updated.splice(fromIndex, 1);
+      updated.splice(toIndex, 0, removed);
+      return updated;
+    });
+  }, []);
+
   const handleClearAll = useCallback(() => {
     // Clean up all image and result resources before clearing
     setImages((prev) => {
@@ -274,6 +283,7 @@ export default function App() {
                   onRemove={handleRemoveImage}
                   onAddMore={handleAddMore}
                   onClearAll={handleClearAll}
+                  onReorderImages={handleReorderImages}
                 />
               </div>
 
@@ -372,6 +382,7 @@ export default function App() {
                   onRemove={handleRemoveImage}
                   onAddMore={handleAddMore}
                   onClearAll={handleClearAll}
+                  onReorderImages={handleReorderImages}
                 />
               </div>
             </MobileDrawer>
