@@ -1,5 +1,5 @@
 import { useRef, useEffect, useLayoutEffect, useState, useCallback } from 'react';
-import type { ImageFile, BorderSettings, ResizeSettings, CanvasBackground, PreviewMode } from '../types';
+import type { ImageFile, BorderSettings, ResizeSettings, CanvasBackground, PreviewMode, ToastVariant } from '../types';
 import { loadImage, calculateBorderSize, calculateOutputDimensions } from '../utils/imageUtils';
 import { useDebounce } from '../hooks/useDebounce';
 
@@ -8,6 +8,7 @@ interface PreviewCanvasProps {
   borderSettings: BorderSettings;
   resizeSettings: ResizeSettings;
   canvasBackground: CanvasBackground;
+  onToast?: (message: string, variant?: ToastVariant) => void;
 }
 
 type ZoomLevel = 'fit' | '100' | number;
@@ -19,7 +20,7 @@ const PREVIEW_MODES: { value: PreviewMode; label: string }[] = [
   { value: 'slider', label: 'Slider' },
 ];
 
-export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBackground }: PreviewCanvasProps) {
+export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBackground, onToast }: PreviewCanvasProps) {
   // Source canvases - always hold Result and Original
   const resultCanvasRef = useRef<HTMLCanvasElement>(null);
   const originalCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -38,6 +39,7 @@ export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBac
   const [sliderPosition, setSliderPosition] = useState(50);
   const [isDragging, setIsDragging] = useState(false);
   const [swapped, setSwapped] = useState(false);
+  const [isCopying, setIsCopying] = useState(false);
 
   // Cache decoded image to avoid expensive re-decode on every settings change
   const loadedImageRef = useRef<{ id: string; img: HTMLImageElement } | null>(null);
@@ -231,6 +233,26 @@ export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBac
     return () => window.removeEventListener('resize', handleResize);
   }, [zoom, renderPreview]);
 
+  const handleCopyToClipboard = useCallback(async () => {
+    const canvas = resultCanvasRef.current;
+    if (!canvas || !image) return;
+    if (!navigator.clipboard?.write) {
+      onToast?.('Clipboard not supported in this browser', 'warning');
+      return;
+    }
+    setIsCopying(true);
+    try {
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) throw new Error('Failed to create image blob');
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      onToast?.('Image copied to clipboard', 'success');
+    } catch {
+      onToast?.('Failed to copy image to clipboard', 'error');
+    } finally {
+      setIsCopying(false);
+    }
+  }, [image, onToast]);
+
   if (!image) {
     return (
       <div className="flex items-center justify-center h-full text-gray-400 dark:text-gray-500">
@@ -395,6 +417,17 @@ export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBac
               </button>
             ))}
           </div>
+
+          <button
+            onClick={handleCopyToClipboard}
+            disabled={isCopying || previewMode === 'slider' || previewMode === 'side-by-side'}
+            title="Copy result to clipboard"
+            className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+          </button>
         </div>
       </div>
     </div>

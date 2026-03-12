@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import type { ImageFile, ProcessingResult } from '../types';
+import type { ImageFile, ProcessingResult, ToastVariant } from '../types';
 import { downloadSingle, downloadAsZip, generateZipFilename } from '../utils/downloadUtils';
 
 interface DownloadPanelProps {
@@ -7,8 +7,12 @@ interface DownloadPanelProps {
   results: ProcessingResult[];
   isProcessing: boolean;
   progress: number;
+  currentIndex?: number;
+  totalCount?: number;
+  currentImageName?: string;
   onProcess: () => void;
   onCancel: () => void;
+  onToast?: (message: string, variant?: ToastVariant) => void;
 }
 
 export function DownloadPanel({
@@ -16,8 +20,12 @@ export function DownloadPanel({
   results,
   isProcessing,
   progress,
+  currentIndex = 0,
+  totalCount = 0,
+  currentImageName = '',
   onProcess,
   onCancel,
+  onToast,
 }: DownloadPanelProps) {
   const [isZipping, setIsZipping] = useState(false);
   const [zipProgress, setZipProgress] = useState(0);
@@ -31,6 +39,7 @@ export function DownloadPanel({
 
     if (results.length === 1) {
       downloadSingle(results[0].blob, results[0].filename);
+      onToast?.('Download started', 'info');
       return;
     }
 
@@ -41,13 +50,15 @@ export function DownloadPanel({
       await downloadAsZip(results, generateZipFilename(), (progress) => {
         setZipProgress(progress);
       });
+      onToast?.(`ZIP downloaded (${results.length} images)`, 'success');
     } catch (error) {
       console.error('ZIP creation failed:', error);
+      onToast?.('ZIP download failed', 'error');
     } finally {
       setIsZipping(false);
       setZipProgress(0);
     }
-  }, [results]);
+  }, [results, onToast]);
 
   const handleDownloadZip = useCallback(async () => {
     if (results.length === 0) return;
@@ -59,22 +70,29 @@ export function DownloadPanel({
       await downloadAsZip(results, generateZipFilename(), (progress) => {
         setZipProgress(progress);
       });
+      onToast?.(`ZIP downloaded (${results.length} images)`, 'success');
     } catch (error) {
       console.error('ZIP creation failed:', error);
+      onToast?.('ZIP download failed', 'error');
     } finally {
       setIsZipping(false);
       setZipProgress(0);
     }
-  }, [results]);
+  }, [results, onToast]);
 
   return (
     <div className="space-y-4">
       {isProcessing && (
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600 dark:text-gray-300">Processing...</span>
+            <span className="text-gray-600 dark:text-gray-300">
+              {totalCount > 0 ? `Image ${currentIndex + 1} of ${totalCount}` : 'Processing...'}
+            </span>
             <span className="text-gray-500">{Math.round(progress)}%</span>
           </div>
+          {currentImageName && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{currentImageName}</p>
+          )}
           <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
             <div
               className="h-full bg-blue-500 transition-all duration-300"
