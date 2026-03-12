@@ -1,8 +1,9 @@
 import { useRef, useEffect, useLayoutEffect, useState, useCallback } from 'react';
-import type { AspectRatio, ImageFile, BorderSettings, ResizeSettings, CanvasBackground, PreviewMode, ToastVariant } from '../types';
+import type { AspectRatio, ImageFile, BorderSettings, ResizeSettings, CanvasBackground, PreviewMode, TextOverlaySettings, ToastVariant } from '../types';
 import { loadImage, calculateBorderSize, calculateOutputDimensions } from '../utils/imageUtils';
 import { calculateAspectRatioBorders } from '../utils/imageProcessing';
 import { applyBorderFill } from '../utils/gradientUtils';
+import { drawTextOverlay } from '../utils/textOverlay';
 import { useDebounce } from '../hooks/useDebounce';
 
 interface PreviewCanvasProps {
@@ -11,6 +12,7 @@ interface PreviewCanvasProps {
   resizeSettings: ResizeSettings;
   canvasBackground: CanvasBackground;
   targetAspectRatio?: AspectRatio;
+  textOverlay?: TextOverlaySettings;
   onToast?: (message: string, variant?: ToastVariant) => void;
 }
 
@@ -23,7 +25,7 @@ const PREVIEW_MODES: { value: PreviewMode; label: string }[] = [
   { value: 'slider', label: 'Slider' },
 ];
 
-export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBackground, targetAspectRatio, onToast }: PreviewCanvasProps) {
+export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBackground, targetAspectRatio, textOverlay, onToast }: PreviewCanvasProps) {
   // Source canvases - always hold Result and Original
   const resultCanvasRef = useRef<HTMLCanvasElement>(null);
   const originalCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -104,8 +106,12 @@ export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBac
 
     ctx.drawImage(img, imageX, imageY, imageW, imageH);
 
+    if (borderMode === 'visible' && textOverlay?.enabled && textOverlay.text.trim()) {
+      drawTextOverlay(ctx, scaledWidth, scaledHeight, border, debouncedBorderSettings.color, textOverlay, scale);
+    }
+
     return { scaledWidth, scaledHeight };
-  }, [debouncedBorderSettings, debouncedResizeSettings, targetAspectRatio, zoom]);
+  }, [debouncedBorderSettings, debouncedResizeSettings, targetAspectRatio, zoom, textOverlay]);
 
   const renderPreview = useCallback(async () => {
     if (!image || !containerRef.current) return;

@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import type { AspectRatio, ImageFile, BorderSettings, ResizeSettings, OutputSettings, ProcessingResult, CanvasBackground, Toast, ToastVariant } from '../types';
+import type { AspectRatio, ImageFile, BorderSettings, ResizeSettings, OutputSettings, ProcessingResult, CanvasBackground, Toast, ToastVariant, TextOverlaySettings } from '../types';
 import { createImageFile, checkMemoryWarning, cleanupImageResources } from '../utils/imageUtils';
 import { useTheme } from '../hooks/useTheme';
 import { useImageProcessor } from '../hooks/useImageProcessor';
@@ -45,6 +45,17 @@ const DEFAULT_CANVAS_BACKGROUND: CanvasBackground = {
   color: '#808080',
 };
 
+const DEFAULT_TEXT_OVERLAY: TextOverlaySettings = {
+  enabled: false,
+  text: '',
+  position: 'bottom-center',
+  fontSize: 1.0,
+  fontFamily: 'sans-serif',
+  color: '#000000',
+  useAutoColor: true,
+  opacity: 1.0,
+};
+
 export default function App() {
   const { theme, toggleTheme } = useTheme();
   const [images, setImages] = useState<ImageFile[]>([]);
@@ -54,6 +65,7 @@ export default function App() {
   const [outputSettings, setOutputSettings] = useState<OutputSettings>(DEFAULT_OUTPUT_SETTINGS);
   const [targetAspectRatio, setTargetAspectRatio] = useState<AspectRatio | undefined>(undefined);
   const [canvasBackground, setCanvasBackground] = useState<CanvasBackground>(DEFAULT_CANVAS_BACKGROUND);
+  const [textOverlay, setTextOverlay] = useState<TextOverlaySettings>(DEFAULT_TEXT_OVERLAY);
   const [results, setResults] = useState<ProcessingResult[]>([]);
   const [memoryWarning, setMemoryWarning] = useState(false);
   const [isImagesDrawerOpen, setIsImagesDrawerOpen] = useState(false);
@@ -182,6 +194,7 @@ export default function App() {
       resize: resizeSettings,
       output: outputSettings,
       targetAspectRatio,
+      textOverlay: textOverlay.enabled ? textOverlay : undefined,
     };
 
     let doneCount = 0;
@@ -221,7 +234,7 @@ export default function App() {
         'error'
       );
     }
-  }, [images, borderSettings, resizeSettings, outputSettings, targetAspectRatio, processImages, addToast]);
+  }, [images, borderSettings, resizeSettings, outputSettings, targetAspectRatio, textOverlay, processImages, addToast]);
 
   const handleCancel = useCallback(() => {
     cancelProcessing();
@@ -330,10 +343,12 @@ export default function App() {
                   resizeSettings={resizeSettings}
                   outputSettings={outputSettings}
                   canvasBackground={canvasBackground}
+                  textOverlay={textOverlay}
                   onBorderChange={setBorderSettings}
                   onResizeChange={setResizeSettings}
                   onOutputChange={setOutputSettings}
                   onCanvasBackgroundChange={setCanvasBackground}
+                  onTextOverlayChange={setTextOverlay}
                 />
 
                 <div className="border-t pt-4">
@@ -362,6 +377,7 @@ export default function App() {
                   resizeSettings={resizeSettings}
                   canvasBackground={canvasBackground}
                   targetAspectRatio={targetAspectRatio}
+                  textOverlay={textOverlay}
                   onToast={addToast}
                 />
               </div>
@@ -438,10 +454,12 @@ export default function App() {
                   resizeSettings={resizeSettings}
                   outputSettings={outputSettings}
                   canvasBackground={canvasBackground}
+                  textOverlay={textOverlay}
                   onBorderChange={setBorderSettings}
                   onResizeChange={setResizeSettings}
                   onOutputChange={setOutputSettings}
                   onCanvasBackgroundChange={setCanvasBackground}
+                  onTextOverlayChange={setTextOverlay}
                 />
 
                 <div className="border-t pt-4">

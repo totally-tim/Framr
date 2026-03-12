@@ -51,6 +51,7 @@ export interface ProcessingConfig {
   output: OutputSettings;
   /** When set, borders are sized to achieve this aspect ratio instead of a fixed width. */
   targetAspectRatio?: AspectRatio;
+  textOverlay?: TextOverlaySettings;
 }
 
 export interface Preset {
@@ -63,6 +64,22 @@ export interface Preset {
   isCustom?: boolean;
   /** Social media aspect ratio — when set, borders fill to achieve this ratio. */
   targetAspectRatio?: AspectRatio;
+}
+
+export type TextPosition = 'bottom-center' | 'top-center' | 'bottom-left' | 'bottom-right' | 'top-left';
+
+export interface TextOverlaySettings {
+  enabled: boolean;
+  text: string;
+  position: TextPosition;
+  /** Multiplier (0.5–2.0) applied to the auto-computed base font size. */
+  fontSize: number;
+  fontFamily: 'sans-serif' | 'serif' | 'monospace';
+  /** Text color used when useAutoColor is false. */
+  color: string;
+  /** When true, pick color automatically for contrast against the border. */
+  useAutoColor: boolean;
+  opacity: number;
 }
 
 export interface ProcessingResult {

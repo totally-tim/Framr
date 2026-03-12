@@ -9,6 +9,7 @@ interface ProcessingState {
   progress: number;
   results: ProcessingResult[];
   cancelled: boolean;
+  currentImageName: string;
 }
 
 export function useImageProcessor() {
@@ -19,6 +20,7 @@ export function useImageProcessor() {
     progress: 0,
     results: [],
     cancelled: false,
+    currentImageName: '',
   });
 
   const workerRef = useRef<Worker | null>(null);
@@ -56,6 +58,7 @@ export function useImageProcessor() {
         progress: 0,
         results: [],
         cancelled: false,
+        currentImageName: '',
       });
 
       const results: ProcessingResult[] = [];
@@ -71,6 +74,7 @@ export function useImageProcessor() {
           ...prev,
           currentIndex: i,
           progress: (i / images.length) * 100,
+          currentImageName: image.name,
         }));
 
         try {
@@ -146,6 +150,7 @@ export function useImageProcessor() {
       progress: 0,
       results: [],
       cancelled: false,
+      currentImageName: '',
     });
   }, []);
 

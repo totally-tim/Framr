@@ -1,4 +1,4 @@
-import type { AspectRatio, BorderSettings, ResizeSettings, OutputSettings } from '../types';
+import type { AspectRatio, BorderSettings, ResizeSettings, OutputSettings, TextOverlaySettings } from '../types';
 import {
   calculateBorderSize,
   calculateAspectRatioBorders,
@@ -8,6 +8,7 @@ import {
   generateOutputFilename,
 } from '../utils/imageProcessing';
 import { applyBorderFill } from '../utils/gradientUtils';
+import { drawTextOverlay } from '../utils/textOverlay';
 
 interface ProcessMessage {
   type: 'process';
@@ -17,6 +18,7 @@ interface ProcessMessage {
     resize: ResizeSettings;
     output: OutputSettings;
     targetAspectRatio?: AspectRatio;
+    textOverlay?: TextOverlaySettings;
   };
   originalFormat: string;
   filename: string;
@@ -46,7 +48,7 @@ type WorkerOutMessage = ResultMessage | ErrorMessage | ProgressMessage;
 
 async function processImage(message: ProcessMessage): Promise<void> {
   const { imageBitmap, config, originalFormat, filename, imageId } = message;
-  const { border: borderSettings, resize: resizeSettings, output: outputSettings, targetAspectRatio } = config;
+  const { border: borderSettings, resize: resizeSettings, output: outputSettings, targetAspectRatio, textOverlay } = config;
 
   try {
     self.postMessage({
@@ -86,6 +88,10 @@ async function processImage(message: ProcessMessage): Promise<void> {
     } as ProgressMessage);
 
     ctx.drawImage(imageBitmap, borderSizes.left, borderSizes.top, resizedWidth, resizedHeight);
+
+    if (textOverlay) {
+      drawTextOverlay(ctx, canvasWidth, canvasHeight, borderSizes, borderSettings.color, textOverlay);
+    }
 
     imageBitmap.close();
 
