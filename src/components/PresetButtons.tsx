@@ -1,12 +1,12 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
-import type { Preset, BorderSettings, ResizeSettings, OutputSettings } from '../types';
+import type { AspectRatio, Preset, BorderSettings, ResizeSettings, OutputSettings } from '../types';
 import { useCustomPresets } from '../hooks/useCustomPresets';
 
 interface PresetButtonsProps {
   currentBorder: BorderSettings;
   currentResize: ResizeSettings;
   currentOutput: OutputSettings;
-  onApply: (border: BorderSettings, resize?: ResizeSettings, output?: OutputSettings) => void;
+  onApply: (border: BorderSettings, resize?: ResizeSettings, output?: OutputSettings, targetAspectRatio?: AspectRatio) => void;
 }
 
 const DEFAULT_GRADIENT_STOPS = [
@@ -51,6 +51,32 @@ const DEFAULT_PRESETS: Preset[] = [
     border: { width: 10, widthUnit: '%', color: '#000000', aspectAware: false, borderMode: 'solid', gradientStops: DEFAULT_GRADIENT_STOPS, gradientAngle: 45 },
     description: 'Prominent black border',
   },
+];
+
+const SOCIAL_BORDER: BorderSettings = {
+  width: 0,
+  widthUnit: 'px',
+  color: '#FFFFFF',
+  aspectAware: false,
+  borderMode: 'solid',
+  gradientStops: DEFAULT_GRADIENT_STOPS,
+  gradientAngle: 45,
+};
+
+interface SocialPreset {
+  id: string;
+  name: string;
+  platform: string;
+  targetAspectRatio: AspectRatio;
+  description: string;
+}
+
+const SOCIAL_PRESETS: SocialPreset[] = [
+  { id: 'ig-square',    name: '1:1',  platform: 'Instagram',  targetAspectRatio: { width: 1, height: 1 },  description: 'Instagram square' },
+  { id: 'ig-portrait',  name: '4:5',  platform: 'Instagram',  targetAspectRatio: { width: 4, height: 5 },  description: 'Instagram portrait' },
+  { id: 'pinterest',    name: '2:3',  platform: 'Pinterest',  targetAspectRatio: { width: 2, height: 3 },  description: 'Pinterest vertical pin' },
+  { id: 'twitter',      name: '16:9', platform: 'Twitter/X',  targetAspectRatio: { width: 16, height: 9 }, description: 'Twitter/X landscape' },
+  { id: 'tiktok',       name: '9:16', platform: 'TikTok',     targetAspectRatio: { width: 9, height: 16 }, description: 'TikTok vertical' },
 ];
 
 export function PresetButtons({ currentBorder, currentResize, currentOutput, onApply }: PresetButtonsProps) {
@@ -98,7 +124,7 @@ export function PresetButtons({ currentBorder, currentResize, currentOutput, onA
       }
       return true;
     };
-  }, [currentBorder, currentResize, currentOutput, isDefaultActive]);
+  }, [currentResize, currentOutput, isDefaultActive]);
 
   function handleSave() {
     const name = saveName.trim();
@@ -153,6 +179,28 @@ export function PresetButtons({ currentBorder, currentResize, currentOutput, onA
                   style={{ backgroundColor: preset.border.color }}
                 />
                 {preset.name}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Social media presets */}
+      <div>
+        <h3 className="font-medium text-sm text-gray-700 dark:text-gray-200 uppercase tracking-wider mb-2">
+          Social
+        </h3>
+        <div className="flex flex-wrap gap-2">
+          {SOCIAL_PRESETS.map((preset) => (
+            <button
+              key={preset.id}
+              onClick={() => onApply(SOCIAL_BORDER, undefined, undefined, preset.targetAspectRatio)}
+              className="px-3 py-1.5 text-sm rounded-lg transition-all bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+              title={preset.description}
+            >
+              <span className="flex items-center gap-1.5">
+                <span className="text-xs text-gray-400 dark:text-gray-500">{preset.platform}</span>
+                <span className="font-medium">{preset.name}</span>
               </span>
             </button>
           ))}

@@ -1,4 +1,4 @@
-import type { BorderSettings, ResizeSettings, OutputSettings } from '../types';
+import type { AspectRatio, BorderSettings, ResizeSettings, OutputSettings } from '../types';
 
 export function getFileExtension(filename: string): string {
   const match = filename.match(/\.([^.]+)$/);
@@ -57,6 +57,37 @@ export function calculateBorderSize(
   }
 
   return { top: borderSize, right: borderSize, bottom: borderSize, left: borderSize };
+}
+
+/**
+ * Calculate border sizes needed to fill an image to a target aspect ratio.
+ * Borders are added only on the sides that need expanding (left/right or top/bottom).
+ */
+export function calculateAspectRatioBorders(
+  imageWidth: number,
+  imageHeight: number,
+  targetRatio: AspectRatio,
+): { top: number; right: number; bottom: number; left: number } {
+  const srcRatio = imageWidth / imageHeight;
+  const tgtRatio = targetRatio.width / targetRatio.height;
+
+  if (Math.abs(srcRatio - tgtRatio) < 0.001) {
+    return { top: 0, right: 0, bottom: 0, left: 0 };
+  }
+
+  if (srcRatio < tgtRatio) {
+    // Image is narrower than target: add left/right borders
+    const targetWidth = Math.round(imageHeight * tgtRatio);
+    const extra = targetWidth - imageWidth;
+    const side = Math.floor(extra / 2);
+    return { top: 0, right: extra - side, bottom: 0, left: side };
+  } else {
+    // Image is shorter than target: add top/bottom borders
+    const targetHeight = Math.round(imageWidth / tgtRatio);
+    const extra = targetHeight - imageHeight;
+    const side = Math.floor(extra / 2);
+    return { top: side, right: 0, bottom: extra - side, left: 0 };
+  }
 }
 
 export function calculateOutputDimensions(

@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import type { ImageFile, BorderSettings, ResizeSettings, OutputSettings, ProcessingResult, CanvasBackground, Toast, ToastVariant } from '../types';
+import type { AspectRatio, ImageFile, BorderSettings, ResizeSettings, OutputSettings, ProcessingResult, CanvasBackground, Toast, ToastVariant } from '../types';
 import { createImageFile, checkMemoryWarning, cleanupImageResources } from '../utils/imageUtils';
 import { useTheme } from '../hooks/useTheme';
 import { useImageProcessor } from '../hooks/useImageProcessor';
@@ -52,6 +52,7 @@ export default function App() {
   const [borderSettings, setBorderSettings] = useState<BorderSettings>(DEFAULT_BORDER_SETTINGS);
   const [resizeSettings, setResizeSettings] = useState<ResizeSettings>(DEFAULT_RESIZE_SETTINGS);
   const [outputSettings, setOutputSettings] = useState<OutputSettings>(DEFAULT_OUTPUT_SETTINGS);
+  const [targetAspectRatio, setTargetAspectRatio] = useState<AspectRatio | undefined>(undefined);
   const [canvasBackground, setCanvasBackground] = useState<CanvasBackground>(DEFAULT_CANVAS_BACKGROUND);
   const [results, setResults] = useState<ProcessingResult[]>([]);
   const [memoryWarning, setMemoryWarning] = useState(false);
@@ -180,6 +181,7 @@ export default function App() {
       border: borderSettings,
       resize: resizeSettings,
       output: outputSettings,
+      targetAspectRatio,
     };
 
     let doneCount = 0;
@@ -219,7 +221,7 @@ export default function App() {
         'error'
       );
     }
-  }, [images, borderSettings, resizeSettings, outputSettings, processImages, addToast]);
+  }, [images, borderSettings, resizeSettings, outputSettings, targetAspectRatio, processImages, addToast]);
 
   const handleCancel = useCallback(() => {
     cancelProcessing();
@@ -359,6 +361,7 @@ export default function App() {
                   borderSettings={borderSettings}
                   resizeSettings={resizeSettings}
                   canvasBackground={canvasBackground}
+                  targetAspectRatio={targetAspectRatio}
                   onToast={addToast}
                 />
               </div>
@@ -369,10 +372,11 @@ export default function App() {
                   currentBorder={borderSettings}
                   currentResize={resizeSettings}
                   currentOutput={outputSettings}
-                  onApply={(border, resize, output) => {
+                  onApply={(border, resize, output, aspectRatio) => {
                     setBorderSettings(border);
                     if (resize) setResizeSettings(resize);
                     if (output) setOutputSettings(output);
+                    setTargetAspectRatio(aspectRatio);
                   }}
                 />
               </div>

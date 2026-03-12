@@ -1,6 +1,7 @@
-import type { BorderSettings, ResizeSettings, OutputSettings } from '../types';
+import type { AspectRatio, BorderSettings, ResizeSettings, OutputSettings } from '../types';
 import {
   calculateBorderSize,
+  calculateAspectRatioBorders,
   calculateOutputDimensions,
   getFileExtension,
   getMimeType,
@@ -15,6 +16,7 @@ interface ProcessMessage {
     border: BorderSettings;
     resize: ResizeSettings;
     output: OutputSettings;
+    targetAspectRatio?: AspectRatio;
   };
   originalFormat: string;
   filename: string;
@@ -44,7 +46,7 @@ type WorkerOutMessage = ResultMessage | ErrorMessage | ProgressMessage;
 
 async function processImage(message: ProcessMessage): Promise<void> {
   const { imageBitmap, config, originalFormat, filename, imageId } = message;
-  const { border: borderSettings, resize: resizeSettings, output: outputSettings } = config;
+  const { border: borderSettings, resize: resizeSettings, output: outputSettings, targetAspectRatio } = config;
 
   try {
     self.postMessage({
@@ -59,7 +61,9 @@ async function processImage(message: ProcessMessage): Promise<void> {
       resizeSettings
     );
 
-    const borderSizes = calculateBorderSize(resizedWidth, resizedHeight, borderSettings);
+    const borderSizes = targetAspectRatio
+      ? calculateAspectRatioBorders(resizedWidth, resizedHeight, targetAspectRatio)
+      : calculateBorderSize(resizedWidth, resizedHeight, borderSettings);
 
     const canvasWidth = resizedWidth + borderSizes.left + borderSizes.right;
     const canvasHeight = resizedHeight + borderSizes.top + borderSizes.bottom;

@@ -40,10 +40,17 @@ export interface OutputSettings {
   quality: number;
 }
 
+export interface AspectRatio {
+  width: number;
+  height: number;
+}
+
 export interface ProcessingConfig {
   border: BorderSettings;
   resize: ResizeSettings;
   output: OutputSettings;
+  /** When set, borders are sized to achieve this aspect ratio instead of a fixed width. */
+  targetAspectRatio?: AspectRatio;
 }
 
 export interface Preset {
@@ -54,6 +61,8 @@ export interface Preset {
   resize?: ResizeSettings;
   output?: OutputSettings;
   isCustom?: boolean;
+  /** Social media aspect ratio — when set, borders fill to achieve this ratio. */
+  targetAspectRatio?: AspectRatio;
 }
 
 export interface ProcessingResult {
