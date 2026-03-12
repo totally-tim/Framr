@@ -75,7 +75,8 @@ export function PresetButtons({ currentBorder, currentResize, currentOutput, onA
       preset.border.width === currentBorder.width &&
       preset.border.widthUnit === currentBorder.widthUnit &&
       preset.border.color === currentBorder.color &&
-      preset.border.aspectAware === currentBorder.aspectAware;
+      preset.border.aspectAware === currentBorder.aspectAware &&
+      preset.border.borderMode === currentBorder.borderMode;
   }, [currentBorder]);
 
   const isCustomActive = useMemo(() => {

@@ -6,6 +6,7 @@ import {
   getMimeType,
   generateOutputFilename,
 } from '../utils/imageProcessing';
+import { applyBorderFill } from '../utils/gradientUtils';
 
 interface ProcessMessage {
   type: 'process';
@@ -72,8 +73,7 @@ async function processImage(message: ProcessMessage): Promise<void> {
     const canvas = new OffscreenCanvas(canvasWidth, canvasHeight);
     const ctx = canvas.getContext('2d')!;
 
-    ctx.fillStyle = borderSettings.color;
-    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    applyBorderFill(ctx, borderSettings, canvasWidth, canvasHeight);
 
     self.postMessage({
       type: 'progress',

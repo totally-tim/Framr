@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
-import type { BorderSettings, ResizeSettings, OutputSettings, CanvasBackground } from '../types';
+import type { BorderSettings, BorderMode, ResizeSettings, OutputSettings, CanvasBackground } from '../types';
 import { PRESET_COLORS, CANVAS_BACKGROUND_COLORS, isValidHex, normalizeHex } from '../utils/colorUtils';
+import { GRADIENT_PRESETS, gradientToCss } from '../utils/gradientUtils';
 
 interface ControlPanelProps {
   borderSettings: BorderSettings;
@@ -82,6 +83,8 @@ export function ControlPanel({
     });
   }, [canvasBackground, onCanvasBackgroundChange]);
 
+  const isGradient = borderSettings.borderMode === 'linear-gradient' || borderSettings.borderMode === 'radial-gradient';
+
   return (
     <div className="space-y-6">
       <div className="space-y-4">
@@ -118,45 +121,183 @@ export function ControlPanel({
           />
         </div>
 
-        <div className="space-y-3">
-          <label className="text-sm text-gray-600 dark:text-gray-300">Color</label>
-
-          <div className="flex items-center gap-2">
-            <input
-              type="color"
-              value={borderSettings.color}
-              onChange={(e) => handleColorChange(e.target.value)}
-              className="w-10 h-10 rounded border cursor-pointer"
-            />
-            <input
-              type="text"
-              value={colorInput}
-              onChange={(e) => handleColorChange(e.target.value)}
-              onBlur={handleColorInputBlur}
-              className="flex-1 px-3 py-2 text-sm rounded border bg-white dark:bg-gray-800 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="#FFFFFF"
-            />
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {PRESET_COLORS.map((preset) => (
+        {/* Border mode selector */}
+        <div className="space-y-2">
+          <label className="text-sm text-gray-600 dark:text-gray-300">Style</label>
+          <div className="flex rounded-lg overflow-hidden border">
+            {(['solid', 'linear-gradient', 'radial-gradient'] as BorderMode[]).map((mode) => (
               <button
-                key={preset.value}
-                onClick={() => handlePresetColorClick(preset.value)}
+                key={mode}
+                onClick={() => onBorderChange({ ...borderSettings, borderMode: mode })}
                 className={`
-                  w-7 h-7 rounded border-2 transition-all
-                  ${borderSettings.color === preset.value
-                    ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-gray-900'
-                    : 'hover:scale-110'
+                  flex-1 py-1.5 text-xs font-medium transition-colors
+                  ${borderSettings.borderMode === mode
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                   }
                 `}
-                style={{ backgroundColor: preset.value }}
-                title={preset.name}
-                aria-label={preset.name}
-              />
+              >
+                {mode === 'solid' ? 'Solid' : mode === 'linear-gradient' ? 'Linear' : 'Radial'}
+              </button>
             ))}
           </div>
         </div>
+
+        {/* Solid color controls */}
+        {!isGradient && (
+          <div className="space-y-3">
+            <label className="text-sm text-gray-600 dark:text-gray-300">Color</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={borderSettings.color}
+                onChange={(e) => handleColorChange(e.target.value)}
+                className="w-10 h-10 rounded border cursor-pointer"
+              />
+              <input
+                type="text"
+                value={colorInput}
+                onChange={(e) => handleColorChange(e.target.value)}
+                onBlur={handleColorInputBlur}
+                className="flex-1 px-3 py-2 text-sm rounded border bg-white dark:bg-gray-800 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="#FFFFFF"
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {PRESET_COLORS.map((preset) => (
+                <button
+                  key={preset.value}
+                  onClick={() => handlePresetColorClick(preset.value)}
+                  className={`
+                    w-7 h-7 rounded border-2 transition-all
+                    ${borderSettings.color === preset.value
+                      ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-gray-900'
+                      : 'hover:scale-110'
+                    }
+                  `}
+                  style={{ backgroundColor: preset.value }}
+                  title={preset.name}
+                  aria-label={preset.name}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Gradient controls */}
+        {isGradient && (
+          <div className="space-y-3">
+            {/* Live gradient preview strip */}
+            <div
+              className="h-8 rounded border"
+              style={{ background: gradientToCss(borderSettings) }}
+            />
+
+            {/* Gradient presets */}
+            <div>
+              <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Presets</label>
+              <div className="flex flex-wrap gap-1.5">
+                {GRADIENT_PRESETS.filter((p) => p.mode === borderSettings.borderMode).map((preset) => (
+                  <button
+                    key={preset.id}
+                    onClick={() => onBorderChange({
+                      ...borderSettings,
+                      gradientStops: preset.stops,
+                      gradientAngle: preset.angle,
+                    })}
+                    className="w-8 h-8 rounded border-2 hover:scale-110 transition-all border-gray-300 dark:border-gray-600"
+                    style={{
+                      background: preset.mode === 'linear-gradient'
+                        ? `linear-gradient(${preset.angle}deg, ${preset.stops.map((s) => `${s.color} ${s.position}%`).join(', ')})`
+                        : `radial-gradient(circle, ${preset.stops.map((s) => `${s.color} ${s.position}%`).join(', ')})`,
+                    }}
+                    title={preset.name}
+                    aria-label={preset.name}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Angle slider (linear only) */}
+            {borderSettings.borderMode === 'linear-gradient' && (
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs text-gray-500 dark:text-gray-400">Angle</label>
+                  <span className="text-xs text-gray-600 dark:text-gray-300">{borderSettings.gradientAngle}°</span>
+                </div>
+                <input
+                  type="range"
+                  value={borderSettings.gradientAngle}
+                  onChange={(e) => onBorderChange({ ...borderSettings, gradientAngle: parseInt(e.target.value) })}
+                  className="slider w-full"
+                  min={0}
+                  max={360}
+                  step={1}
+                />
+              </div>
+            )}
+
+            {/* Color stops editor */}
+            <div className="space-y-2">
+              <label className="text-xs text-gray-500 dark:text-gray-400">Color Stops</label>
+              {borderSettings.gradientStops.map((stop, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={stop.color}
+                    onChange={(e) => {
+                      const stops = borderSettings.gradientStops.map((s, i) =>
+                        i === idx ? { ...s, color: e.target.value } : s
+                      );
+                      onBorderChange({ ...borderSettings, gradientStops: stops });
+                    }}
+                    className="w-8 h-8 rounded border cursor-pointer flex-shrink-0"
+                  />
+                  <input
+                    type="range"
+                    value={stop.position}
+                    onChange={(e) => {
+                      const stops = borderSettings.gradientStops.map((s, i) =>
+                        i === idx ? { ...s, position: parseInt(e.target.value) } : s
+                      );
+                      onBorderChange({ ...borderSettings, gradientStops: stops });
+                    }}
+                    className="slider flex-1"
+                    min={0}
+                    max={100}
+                    step={1}
+                  />
+                  <span className="text-xs text-gray-500 w-8 text-right">{stop.position}%</span>
+                  {borderSettings.gradientStops.length > 2 && (
+                    <button
+                      onClick={() => {
+                        const stops = borderSettings.gradientStops.filter((_, i) => i !== idx);
+                        onBorderChange({ ...borderSettings, gradientStops: stops });
+                      }}
+                      className="text-gray-400 hover:text-red-500 transition-colors"
+                      title="Remove stop"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              ))}
+              {borderSettings.gradientStops.length < 5 && (
+                <button
+                  onClick={() => {
+                    const stops = [...borderSettings.gradientStops, { color: '#888888', position: 50 }];
+                    onBorderChange({ ...borderSettings, gradientStops: stops });
+                  }}
+                  className="text-xs text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+                >
+                  + Add stop
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="space-y-4">

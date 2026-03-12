@@ -1,6 +1,7 @@
 import { useRef, useEffect, useLayoutEffect, useState, useCallback } from 'react';
 import type { ImageFile, BorderSettings, ResizeSettings, CanvasBackground, PreviewMode, ToastVariant } from '../types';
 import { loadImage, calculateBorderSize, calculateOutputDimensions } from '../utils/imageUtils';
+import { applyBorderFill } from '../utils/gradientUtils';
 import { useDebounce } from '../hooks/useDebounce';
 
 interface PreviewCanvasProps {
@@ -89,8 +90,7 @@ export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBac
     ctx.clearRect(0, 0, scaledWidth, scaledHeight);
 
     if (borderMode === 'visible') {
-      ctx.fillStyle = debouncedBorderSettings.color;
-      ctx.fillRect(0, 0, scaledWidth, scaledHeight);
+      applyBorderFill(ctx, debouncedBorderSettings, scaledWidth, scaledHeight);
     }
 
     const imageX = Math.round(border.left * scale);

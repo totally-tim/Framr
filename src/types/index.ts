@@ -10,11 +10,21 @@ export interface ImageFile {
   error?: string;
 }
 
+export interface GradientStop {
+  color: string;
+  position: number; // 0–100
+}
+
+export type BorderMode = 'solid' | 'linear-gradient' | 'radial-gradient';
+
 export interface BorderSettings {
   width: number;
   widthUnit: 'px' | '%';
   color: string;
   aspectAware: boolean;
+  borderMode: BorderMode;
+  gradientStops: GradientStop[];
+  gradientAngle: number; // degrees, for linear gradient
 }
 
 export interface ResizeSettings {
