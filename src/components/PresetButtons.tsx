@@ -1,6 +1,7 @@
-import { useMemo, useState, useRef, useEffect } from 'react';
+import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import type { AspectRatio, Preset, BorderSettings, ResizeSettings, OutputSettings } from '../types';
 import { useCustomPresets } from '../hooks/useCustomPresets';
+import { DEFAULT_GRADIENT_STOPS } from '../utils/constants';
 
 interface PresetButtonsProps {
   currentBorder: BorderSettings;
@@ -8,11 +9,6 @@ interface PresetButtonsProps {
   currentOutput: OutputSettings;
   onApply: (border: BorderSettings, resize?: ResizeSettings, output?: OutputSettings, targetAspectRatio?: AspectRatio) => void;
 }
-
-const DEFAULT_GRADIENT_STOPS = [
-  { color: '#FFFFFF', position: 0 },
-  { color: '#000000', position: 100 },
-];
 
 const DEFAULT_PRESETS: Preset[] = [
   {
@@ -126,31 +122,31 @@ export function PresetButtons({ currentBorder, currentResize, currentOutput, onA
     };
   }, [currentResize, currentOutput, isDefaultActive]);
 
-  function handleSave() {
+  const handleSave = useCallback(() => {
     const name = saveName.trim();
     if (!name) return;
     savePreset(name, currentBorder, currentResize, currentOutput);
     setSaveName('');
     setShowSaveInput(false);
-  }
+  }, [saveName, currentBorder, currentResize, currentOutput, savePreset]);
 
-  function handleSaveKeyDown(e: React.KeyboardEvent) {
+  const handleSaveKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleSave();
     if (e.key === 'Escape') { setSaveName(''); setShowSaveInput(false); }
-  }
+  }, [handleSave]);
 
-  function handleRenameKeyDown(e: React.KeyboardEvent, id: string) {
+  const handleRenameKeyDown = useCallback((e: React.KeyboardEvent, id: string) => {
     if (e.key === 'Enter') {
-      renamePreset(id, renameValue);
+      if (renameValue.trim()) renamePreset(id, renameValue);
       setRenamingId(null);
     }
     if (e.key === 'Escape') setRenamingId(null);
-  }
+  }, [renameValue, renamePreset]);
 
-  function startRename(preset: Preset) {
+  const startRename = useCallback((preset: Preset) => {
     setRenamingId(preset.id);
     setRenameValue(preset.name);
-  }
+  }, []);
 
   return (
     <div className="space-y-3">
@@ -276,7 +272,7 @@ export function PresetButtons({ currentBorder, currentResize, currentOutput, onA
                     value={renameValue}
                     onChange={(e) => setRenameValue(e.target.value)}
                     onKeyDown={(e) => handleRenameKeyDown(e, preset.id)}
-                    onBlur={() => { renamePreset(preset.id, renameValue); setRenamingId(null); }}
+                    onBlur={() => { if (renameValue.trim()) renamePreset(preset.id, renameValue); setRenamingId(null); }}
                     className="text-sm w-28 bg-transparent outline-none border-b border-current"
                     maxLength={40}
                   />

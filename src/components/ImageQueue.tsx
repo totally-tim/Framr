@@ -36,6 +36,7 @@ export function ImageQueue({
   const [touchDraggingIndex, setTouchDraggingIndex] = useState<number | null>(null);
   const [touchDragOverIndex, setTouchDragOverIndex] = useState<number | null>(null);
   const isDraggingTouchRef = useRef(false);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   // Prevent scroll during touch drag (non-passive listener required)
@@ -47,6 +48,13 @@ export function ImageQueue({
     };
     el.addEventListener('touchmove', handler, { passive: false });
     return () => el.removeEventListener('touchmove', handler);
+  }, []);
+
+  // Clean up long-press timer on unmount
+  useEffect(() => {
+    return () => {
+      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    };
   }, []);
 
   // Desktop drag handlers
@@ -79,16 +87,28 @@ export function ImageQueue({
     setDragOverIndex(null);
   }, []);
 
-  // Touch drag handlers
+  // Touch drag handlers with long-press guard
   const handleTouchStart = useCallback((_e: React.TouchEvent, index: number) => {
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
     touchDragIndexRef.current = index;
     touchDragOverIndexRef.current = index;
-    isDraggingTouchRef.current = true;
-    setTouchDraggingIndex(index);
-    setTouchDragOverIndex(index);
+    longPressTimerRef.current = setTimeout(() => {
+      longPressTimerRef.current = null;
+      isDraggingTouchRef.current = true;
+      setTouchDraggingIndex(index);
+      setTouchDragOverIndex(index);
+    }, 300);
   }, []);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    // If long-press hasn't fired yet, user is scrolling — cancel drag
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+      touchDragIndexRef.current = null;
+      touchDragOverIndexRef.current = null;
+      return;
+    }
     if (!isDraggingTouchRef.current) return;
     const touch = e.touches[0];
     const el = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -103,9 +123,13 @@ export function ImageQueue({
   }, []);
 
   const handleTouchEnd = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
     const fromIndex = touchDragIndexRef.current;
     const toIndex = touchDragOverIndexRef.current;
-    if (fromIndex !== null && toIndex !== null && fromIndex !== toIndex) {
+    if (isDraggingTouchRef.current && fromIndex !== null && toIndex !== null && fromIndex !== toIndex) {
       onReorderImages(fromIndex, toIndex);
     }
     touchDragIndexRef.current = null;

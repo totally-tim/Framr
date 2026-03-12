@@ -11,6 +11,7 @@ export interface ImageFile {
 }
 
 export interface GradientStop {
+  id: string;
   color: string;
   position: number; // 0–100
 }

@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
-import type { AspectRatio, ImageFile, BorderSettings, ResizeSettings, OutputSettings, ProcessingResult, CanvasBackground, Toast, ToastVariant } from '../types';
+import type { AspectRatio, BorderSettings, ImageFile, ResizeSettings, OutputSettings, ProcessingResult, CanvasBackground, Toast, ToastVariant } from '../types';
 import { createImageFile, checkMemoryWarning, cleanupImageResources } from '../utils/imageUtils';
+import { DEFAULT_BORDER_SETTINGS } from '../utils/constants';
 import { useTheme } from '../hooks/useTheme';
 import { useImageProcessor } from '../hooks/useImageProcessor';
 import { DropZone } from './DropZone';
@@ -15,19 +16,6 @@ import { MobileActionBar } from './MobileActionBar';
 import { ToastContainer } from './Toast';
 import { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
-
-const DEFAULT_BORDER_SETTINGS: BorderSettings = {
-  width: 5,
-  widthUnit: '%',
-  color: '#FFFFFF',
-  aspectAware: false,
-  borderMode: 'solid',
-  gradientStops: [
-    { color: '#FFFFFF', position: 0 },
-    { color: '#000000', position: 100 },
-  ],
-  gradientAngle: 45,
-};
 
 const DEFAULT_RESIZE_SETTINGS: ResizeSettings = {
   enabled: false,
@@ -394,8 +382,6 @@ export default function App() {
                 images={images}
                 isProcessing={isProcessing}
                 progress={progress}
-                currentIndex={currentIndex}
-                totalCount={totalCount}
                 onProcess={handleProcess}
                 onCancel={handleCancel}
                 onOpenImages={() => setIsImagesDrawerOpen(true)}
@@ -449,10 +435,11 @@ export default function App() {
                     currentBorder={borderSettings}
                     currentResize={resizeSettings}
                     currentOutput={outputSettings}
-                    onApply={(border, resize, output) => {
+                    onApply={(border, resize, output, aspectRatio) => {
                       setBorderSettings(border);
                       if (resize) setResizeSettings(resize);
                       if (output) setOutputSettings(output);
+                      setTargetAspectRatio(aspectRatio);
                     }}
                   />
                 </div>

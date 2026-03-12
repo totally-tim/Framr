@@ -16,7 +16,17 @@ function loadFromStorage(): Preset[] {
         typeof p.id === 'string' &&
         typeof p.name === 'string' &&
         typeof p.border === 'object'
-    );
+    ).map((p) => ({
+      ...p,
+      border: {
+        ...p.border,
+        gradientStops: (p.border.gradientStops ?? []).map((s: { id?: string; color: string; position: number }, i: number) => ({
+          id: s.id ?? `migrated-${p.id}-${i}`,
+          color: s.color,
+          position: s.position,
+        })),
+      },
+    }));
   } catch {
     return [];
   }
@@ -59,9 +69,11 @@ export function useCustomPresets() {
   );
 
   const renamePreset = useCallback((id: string, name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
     setCustomPresets((prev) => {
       const updated = prev.map((p) =>
-        p.id === id ? { ...p, name: name.trim() } : p
+        p.id === id ? { ...p, name: trimmed } : p
       );
       saveToStorage(updated);
       return updated;

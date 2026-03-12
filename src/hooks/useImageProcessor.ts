@@ -7,6 +7,7 @@ interface ProcessingState {
   currentIndex: number;
   totalCount: number;
   progress: number;
+  currentImageName: string;
   results: ProcessingResult[];
   cancelled: boolean;
 }
@@ -17,6 +18,7 @@ export function useImageProcessor() {
     currentIndex: 0,
     totalCount: 0,
     progress: 0,
+    currentImageName: '',
     results: [],
     cancelled: false,
   });
@@ -54,6 +56,7 @@ export function useImageProcessor() {
         currentIndex: 0,
         totalCount: images.length,
         progress: 0,
+        currentImageName: images[0]?.name ?? '',
         results: [],
         cancelled: false,
       });
@@ -71,6 +74,7 @@ export function useImageProcessor() {
           ...prev,
           currentIndex: i,
           progress: (i / images.length) * 100,
+          currentImageName: image.name,
         }));
 
         try {
@@ -144,6 +148,7 @@ export function useImageProcessor() {
       currentIndex: 0,
       totalCount: 0,
       progress: 0,
+      currentImageName: '',
       results: [],
       cancelled: false,
     });

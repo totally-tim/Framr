@@ -19,7 +19,7 @@ export function DropZone({ onFilesSelected, disabled = false, hasImages = false 
     if (!disabled) {
       setIsDragging(true);
       setError(null);
-      const count = e.dataTransfer.items?.length ?? 0;
+      const count = e.dataTransfer.items?.length || e.dataTransfer.files?.length || 0;
       setDragCount(count);
     }
   }, [disabled]);
