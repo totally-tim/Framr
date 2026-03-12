@@ -4,10 +4,12 @@ import { isValidImageType } from '../utils/imageUtils';
 interface DropZoneProps {
   onFilesSelected: (files: File[]) => void;
   disabled?: boolean;
+  hasImages?: boolean;
 }
 
-export function DropZone({ onFilesSelected, disabled = false }: DropZoneProps) {
+export function DropZone({ onFilesSelected, disabled = false, hasImages = false }: DropZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
+  const [dragCount, setDragCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -17,6 +19,8 @@ export function DropZone({ onFilesSelected, disabled = false }: DropZoneProps) {
     if (!disabled) {
       setIsDragging(true);
       setError(null);
+      const count = e.dataTransfer.items?.length ?? 0;
+      setDragCount(count);
     }
   }, [disabled]);
 
@@ -25,6 +29,7 @@ export function DropZone({ onFilesSelected, disabled = false }: DropZoneProps) {
     e.stopPropagation();
     if (e.currentTarget === e.target) {
       setIsDragging(false);
+      setDragCount(0);
     }
   }, []);
 
@@ -53,6 +58,7 @@ export function DropZone({ onFilesSelected, disabled = false }: DropZoneProps) {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
+    setDragCount(0);
 
     if (disabled) return;
 
@@ -98,8 +104,94 @@ export function DropZone({ onFilesSelected, disabled = false }: DropZoneProps) {
     }
   }, [disabled, processFiles]);
 
+  const sharedInput = (
+    <input
+      ref={inputRef}
+      type="file"
+      accept="image/jpeg,image/png,image/tiff,image/webp,.jpg,.jpeg,.png,.tiff,.tif,.webp"
+      multiple
+      onChange={handleInputChange}
+      className="hidden"
+      disabled={disabled}
+    />
+  );
+
+  const sharedHandlers = {
+    onDragEnter: handleDragEnter,
+    onDragLeave: handleDragLeave,
+    onDragOver: handleDragOver,
+    onDrop: handleDrop,
+    onClick: handleClick,
+    onPaste: handlePaste,
+    tabIndex: disabled ? -1 : 0,
+    role: 'button' as const,
+  };
+
+  if (hasImages) {
+    // Compact add-more state
+    return (
+      <div
+        {...sharedHandlers}
+        aria-label="Drop images here or click to add more"
+        className={`
+          relative flex items-center gap-3 px-4 py-3
+          border-2 border-dashed rounded-lg
+          transition-all duration-200 cursor-pointer
+          ${isDragging
+            ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30 drop-zone-active'
+            : 'border-gray-200 dark:border-gray-700 hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+          }
+          ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
+        `}
+      >
+        {sharedInput}
+
+        <div className={`
+          p-1.5 rounded-full flex-shrink-0
+          ${isDragging ? 'bg-blue-100 dark:bg-blue-900' : 'bg-gray-100 dark:bg-gray-800'}
+        `}>
+          <svg
+            className={`w-4 h-4 ${isDragging ? 'text-blue-500' : 'text-gray-400'}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 4v16m8-8H4"
+            />
+          </svg>
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <p className={`text-sm font-medium truncate ${isDragging ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'}`}>
+            {isDragging && dragCount > 0
+              ? `Drop ${dragCount} file${dragCount !== 1 ? 's' : ''} here`
+              : 'Add more images'}
+          </p>
+          {!isDragging && (
+            <p className="text-xs text-gray-400 dark:text-gray-500 truncate">
+              Drop or click to browse
+            </p>
+          )}
+        </div>
+
+        {error && (
+          <p className="text-xs text-amber-600 dark:text-amber-400 flex-shrink-0">
+            {error}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  // Prominent empty state
   return (
     <div
+      {...sharedHandlers}
+      aria-label="Drop images here or click to select"
       className={`
         relative flex flex-col items-center justify-center
         min-h-[300px] md:min-h-[400px]
@@ -111,33 +203,17 @@ export function DropZone({ onFilesSelected, disabled = false }: DropZoneProps) {
         }
         ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
       `}
-      onDragEnter={handleDragEnter}
-      onDragLeave={handleDragLeave}
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
-      onClick={handleClick}
-      onPaste={handlePaste}
-      tabIndex={disabled ? -1 : 0}
-      role="button"
-      aria-label="Drop images here or click to select"
     >
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/jpeg,image/png,image/tiff,image/webp,.jpg,.jpeg,.png,.tiff,.tif,.webp"
-        multiple
-        onChange={handleInputChange}
-        className="hidden"
-        disabled={disabled}
-      />
+      {sharedInput}
 
       <div className="flex flex-col items-center gap-4 p-8 text-center">
         <div className={`
-          p-4 rounded-full
+          p-5 rounded-full
+          transition-colors duration-200
           ${isDragging ? 'bg-blue-100 dark:bg-blue-900' : 'bg-gray-100 dark:bg-gray-800'}
         `}>
           <svg
-            className={`w-12 h-12 ${isDragging ? 'text-blue-500' : 'text-gray-400'}`}
+            className={`w-14 h-14 transition-colors duration-200 ${isDragging ? 'text-blue-500' : 'text-gray-400'}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -152,15 +228,22 @@ export function DropZone({ onFilesSelected, disabled = false }: DropZoneProps) {
         </div>
 
         <div className="space-y-2">
-          <p className="text-lg font-medium text-gray-700 dark:text-gray-200">
-            {isDragging ? 'Drop images here' : 'Drop images here'}
+          <p className="text-xl font-semibold text-gray-700 dark:text-gray-200">
+            {isDragging
+              ? (dragCount > 0 ? `Drop ${dragCount} image${dragCount !== 1 ? 's' : ''} here` : 'Drop images here')
+              : 'Drop images here or click to browse'
+            }
           </p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            or click to select files
-          </p>
-          <p className="text-xs text-gray-400 dark:text-gray-500">
-            Supports JPEG, PNG, TIFF, WebP
-          </p>
+          {!isDragging && (
+            <>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Drag &amp; drop or click to select from your device
+              </p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">
+                Supports JPEG, PNG, TIFF, WebP
+              </p>
+            </>
+          )}
         </div>
 
         {error && (

@@ -268,13 +268,16 @@ export default function App() {
         {!hasImages ? (
           <div className="flex-1 flex items-center justify-center p-4 md:p-8">
             <div className="w-full max-w-2xl">
-              <DropZone onFilesSelected={handleFilesSelected} />
+              <DropZone onFilesSelected={handleFilesSelected} hasImages={false} />
             </div>
           </div>
         ) : (
           <>
             {/* Desktop sidebar - hidden on mobile */}
             <aside className="hidden md:flex w-72 xl:w-80 border-r bg-surface-light dark:bg-surface-dark flex-col overflow-hidden">
+              <div className="p-3 border-b">
+                <DropZone onFilesSelected={handleFilesSelected} hasImages={true} />
+              </div>
               <div className="flex-1 overflow-hidden flex flex-col">
                 <ImageQueue
                   images={images}
