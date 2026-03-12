@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import type { ImageFile, BorderSettings, ResizeSettings, OutputSettings, ProcessingResult, CanvasBackground } from '../types';
+import type { ImageFile, BorderSettings, ResizeSettings, OutputSettings, ProcessingResult, CanvasBackground, Toast, ToastVariant } from '../types';
 import { createImageFile, checkMemoryWarning, cleanupImageResources } from '../utils/imageUtils';
 import { useTheme } from '../hooks/useTheme';
 import { useImageProcessor } from '../hooks/useImageProcessor';
@@ -12,6 +12,7 @@ import { DownloadPanel } from './DownloadPanel';
 import { ThemeToggle } from './ThemeToggle';
 import { MobileDrawer } from './MobileDrawer';
 import { MobileActionBar } from './MobileActionBar';
+import { ToastContainer } from './Toast';
 
 const DEFAULT_BORDER_SETTINGS: BorderSettings = {
   width: 5,
@@ -48,12 +49,25 @@ export default function App() {
   const [memoryWarning, setMemoryWarning] = useState(false);
   const [isImagesDrawerOpen, setIsImagesDrawerOpen] = useState(false);
   const [isControlsDrawerOpen, setIsControlsDrawerOpen] = useState(false);
+  const [toasts, setToasts] = useState<Toast[]>([]);
+
+  const addToast = useCallback((message: string, variant: ToastVariant = 'info') => {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    setToasts((prev) => [...prev, { id, variant, message }]);
+  }, []);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
     isProcessing,
     progress,
+    currentIndex,
+    totalCount,
+    currentImageName,
     processImages,
     cancelProcessing,
     resetState,
@@ -151,10 +165,14 @@ export default function App() {
       output: outputSettings,
     };
 
+    let doneCount = 0;
+    let errorCount = 0;
+
     await processImages(
       pendingImages,
       config,
       (imageId, result) => {
+        doneCount++;
         setImages((prev) =>
           prev.map((img) =>
             img.id === imageId ? { ...img, status: 'done', processedBlob: result.blob } : img
@@ -163,6 +181,7 @@ export default function App() {
         setResults((prev) => [...prev, result]);
       },
       (imageId, error) => {
+        errorCount++;
         setImages((prev) =>
           prev.map((img) =>
             img.id === imageId ? { ...img, status: 'error', error } : img
@@ -170,7 +189,20 @@ export default function App() {
         );
       }
     );
-  }, [images, borderSettings, resizeSettings, outputSettings, processImages]);
+
+    if (doneCount > 0) {
+      addToast(
+        `${doneCount} image${doneCount !== 1 ? 's' : ''} processed successfully`,
+        'success'
+      );
+    }
+    if (errorCount > 0) {
+      addToast(
+        `${errorCount} image${errorCount !== 1 ? 's' : ''} failed to process`,
+        'error'
+      );
+    }
+  }, [images, borderSettings, resizeSettings, outputSettings, processImages, addToast]);
 
   const handleCancel = useCallback(() => {
     cancelProcessing();
@@ -263,8 +295,12 @@ export default function App() {
                     results={results}
                     isProcessing={isProcessing}
                     progress={progress}
+                    currentIndex={currentIndex}
+                    totalCount={totalCount}
+                    currentImageName={currentImageName}
                     onProcess={handleProcess}
                     onCancel={handleCancel}
+                    onToast={addToast}
                   />
                 </div>
               </div>
@@ -278,14 +314,21 @@ export default function App() {
                   borderSettings={borderSettings}
                   resizeSettings={resizeSettings}
                   canvasBackground={canvasBackground}
+                  onToast={addToast}
                 />
               </div>
 
               {/* Desktop presets - hidden on mobile */}
               <div className="hidden md:block p-4 border-t bg-surface-light dark:bg-surface-dark">
                 <PresetButtons
-                  currentSettings={borderSettings}
-                  onApply={setBorderSettings}
+                  currentBorder={borderSettings}
+                  currentResize={resizeSettings}
+                  currentOutput={outputSettings}
+                  onApply={(border, resize, output) => {
+                    setBorderSettings(border);
+                    if (resize) setResizeSettings(resize);
+                    if (output) setOutputSettings(output);
+                  }}
                 />
               </div>
 
@@ -302,6 +345,8 @@ export default function App() {
                 images={images}
                 isProcessing={isProcessing}
                 progress={progress}
+                currentIndex={currentIndex}
+                totalCount={totalCount}
                 onProcess={handleProcess}
                 onCancel={handleCancel}
                 onOpenImages={() => setIsImagesDrawerOpen(true)}
@@ -351,8 +396,14 @@ export default function App() {
 
                 <div className="border-t pt-4">
                   <PresetButtons
-                    currentSettings={borderSettings}
-                    onApply={setBorderSettings}
+                    currentBorder={borderSettings}
+                    currentResize={resizeSettings}
+                    currentOutput={outputSettings}
+                    onApply={(border, resize, output) => {
+                      setBorderSettings(border);
+                      if (resize) setResizeSettings(resize);
+                      if (output) setOutputSettings(output);
+                    }}
                   />
                 </div>
 
@@ -362,8 +413,12 @@ export default function App() {
                     results={results}
                     isProcessing={isProcessing}
                     progress={progress}
+                    currentIndex={currentIndex}
+                    totalCount={totalCount}
+                    currentImageName={currentImageName}
                     onProcess={handleProcess}
                     onCancel={handleCancel}
+                    onToast={addToast}
                   />
                 </div>
               </div>
@@ -371,6 +426,8 @@ export default function App() {
           </>
         )}
       </main>
+
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
 
       <footer className="hidden md:block py-2 px-4 border-t text-center text-xs text-gray-500 dark:text-gray-400 bg-surface-light dark:bg-surface-dark">
         Framr - Add borders to your images. All processing happens in your browser.
