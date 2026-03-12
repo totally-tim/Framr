@@ -13,12 +13,20 @@ import { ThemeToggle } from './ThemeToggle';
 import { MobileDrawer } from './MobileDrawer';
 import { MobileActionBar } from './MobileActionBar';
 import { ToastContainer } from './Toast';
+import { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
 const DEFAULT_BORDER_SETTINGS: BorderSettings = {
   width: 5,
   widthUnit: '%',
   color: '#FFFFFF',
   aspectAware: false,
+  borderMode: 'solid',
+  gradientStops: [
+    { color: '#FFFFFF', position: 0 },
+    { color: '#000000', position: 100 },
+  ],
+  gradientAngle: 45,
 };
 
 const DEFAULT_RESIZE_SETTINGS: ResizeSettings = {
@@ -222,8 +230,31 @@ export default function App() {
     );
   }, [cancelProcessing]);
 
-  const selectedImage = images.find((img) => img.id === selectedId) || null;
   const hasImages = images.length > 0;
+
+  const handleNavigate = useCallback((direction: 'up' | 'down') => {
+    if (images.length === 0) return;
+    const currentIndex = images.findIndex((img) => img.id === selectedId);
+    if (direction === 'up') {
+      const newIndex = currentIndex <= 0 ? images.length - 1 : currentIndex - 1;
+      setSelectedId(images[newIndex].id);
+    } else {
+      const newIndex = currentIndex >= images.length - 1 ? 0 : currentIndex + 1;
+      setSelectedId(images[newIndex].id);
+    }
+  }, [images, selectedId]);
+
+  useKeyboardShortcuts({
+    onProcess: handleProcess,
+    onRemoveSelected: () => { if (selectedId) handleRemoveImage(selectedId); },
+    onNavigate: handleNavigate,
+    onDeselect: () => setSelectedId(null),
+    hasImages,
+    selectedId,
+    isProcessing,
+  });
+
+  const selectedImage = images.find((img) => img.id === selectedId) || null;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -249,6 +280,7 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-2">
+          <KeyboardShortcutsHelp />
           <ThemeToggle theme={theme} onToggle={toggleTheme} />
           <a
             href="https://github.com/totally-tim/framr"

@@ -9,41 +9,46 @@ interface PresetButtonsProps {
   onApply: (border: BorderSettings, resize?: ResizeSettings, output?: OutputSettings) => void;
 }
 
+const DEFAULT_GRADIENT_STOPS = [
+  { color: '#FFFFFF', position: 0 },
+  { color: '#000000', position: 100 },
+];
+
 const DEFAULT_PRESETS: Preset[] = [
   {
     id: 'white-3',
     name: 'White 3%',
-    border: { width: 3, widthUnit: '%', color: '#FFFFFF', aspectAware: false },
+    border: { width: 3, widthUnit: '%', color: '#FFFFFF', aspectAware: false, borderMode: 'solid', gradientStops: DEFAULT_GRADIENT_STOPS, gradientAngle: 45 },
     description: 'Minimal white border',
   },
   {
     id: 'white-5',
     name: 'White 5%',
-    border: { width: 5, widthUnit: '%', color: '#FFFFFF', aspectAware: false },
+    border: { width: 5, widthUnit: '%', color: '#FFFFFF', aspectAware: false, borderMode: 'solid', gradientStops: DEFAULT_GRADIENT_STOPS, gradientAngle: 45 },
     description: 'Standard white border',
   },
   {
     id: 'white-10',
     name: 'White 10%',
-    border: { width: 10, widthUnit: '%', color: '#FFFFFF', aspectAware: false },
+    border: { width: 10, widthUnit: '%', color: '#FFFFFF', aspectAware: false, borderMode: 'solid', gradientStops: DEFAULT_GRADIENT_STOPS, gradientAngle: 45 },
     description: 'Prominent white border',
   },
   {
     id: 'black-3',
     name: 'Black 3%',
-    border: { width: 3, widthUnit: '%', color: '#000000', aspectAware: false },
+    border: { width: 3, widthUnit: '%', color: '#000000', aspectAware: false, borderMode: 'solid', gradientStops: DEFAULT_GRADIENT_STOPS, gradientAngle: 45 },
     description: 'Minimal black border',
   },
   {
     id: 'black-5',
     name: 'Black 5%',
-    border: { width: 5, widthUnit: '%', color: '#000000', aspectAware: false },
+    border: { width: 5, widthUnit: '%', color: '#000000', aspectAware: false, borderMode: 'solid', gradientStops: DEFAULT_GRADIENT_STOPS, gradientAngle: 45 },
     description: 'Standard black border',
   },
   {
     id: 'black-10',
     name: 'Black 10%',
-    border: { width: 10, widthUnit: '%', color: '#000000', aspectAware: false },
+    border: { width: 10, widthUnit: '%', color: '#000000', aspectAware: false, borderMode: 'solid', gradientStops: DEFAULT_GRADIENT_STOPS, gradientAngle: 45 },
     description: 'Prominent black border',
   },
 ];

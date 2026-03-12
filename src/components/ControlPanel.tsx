@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
-import type { BorderSettings, ResizeSettings, OutputSettings, CanvasBackground } from '../types';
+import type { BorderSettings, BorderMode, ResizeSettings, OutputSettings, CanvasBackground } from '../types';
 import { PRESET_COLORS, CANVAS_BACKGROUND_COLORS, isValidHex, normalizeHex } from '../utils/colorUtils';
+import { GRADIENT_PRESETS, gradientToCss } from '../utils/gradientUtils';
 
 interface ControlPanelProps {
   borderSettings: BorderSettings;
