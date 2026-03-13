@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import type { AspectRatio, ImageFile, BorderSettings, ResizeSettings, OutputSettings, ProcessingResult, CanvasBackground, Toast, ToastVariant, TextOverlaySettings } from '../types';
 import { createImageFile, checkMemoryWarning, cleanupImageResources } from '../utils/imageUtils';
+import { DEFAULT_BORDER_SETTINGS } from '../utils/constants';
 import { useTheme } from '../hooks/useTheme';
 import { useImageProcessor } from '../hooks/useImageProcessor';
 import { DropZone } from './DropZone';
@@ -15,19 +16,6 @@ import { MobileActionBar } from './MobileActionBar';
 import { ToastContainer } from './Toast';
 import { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
-
-const DEFAULT_BORDER_SETTINGS: BorderSettings = {
-  width: 5,
-  widthUnit: '%',
-  color: '#FFFFFF',
-  aspectAware: false,
-  borderMode: 'solid',
-  gradientStops: [
-    { color: '#FFFFFF', position: 0 },
-    { color: '#000000', position: 100 },
-  ],
-  gradientAngle: 45,
-};
 
 const DEFAULT_RESIZE_SETTINGS: ResizeSettings = {
   enabled: false,
@@ -119,13 +107,12 @@ export default function App() {
   }, []);
 
   const handleRemoveImage = useCallback((id: string) => {
+    // Capture references before state updates for cleanup after
+    let removedImage: ImageFile | undefined;
+    let removedResult: ProcessingResult | undefined;
+
     setImages((prev) => {
-      // Find and clean up the removed image
-      const removedImage = prev.find((img) => img.id === id);
-      if (removedImage) {
-        cleanupImageResources(removedImage);
-      }
-      
+      removedImage = prev.find((img) => img.id === id);
       const updated = prev.filter((img) => img.id !== id);
       setMemoryWarning(checkMemoryWarning(updated));
 
@@ -139,13 +126,17 @@ export default function App() {
     });
 
     setResults((prev) => {
-      // Clean up blob from removed result
-      const removedResult = prev.find((r) => r.imageId === id);
-      if (removedResult) {
-        (removedResult as { blob?: Blob }).blob = undefined;
-      }
+      removedResult = prev.find((r) => r.imageId === id);
       return prev.filter((r) => r.imageId !== id);
     });
+
+    // Clean up resources after state updates (no mutation inside setters)
+    if (removedImage) {
+      cleanupImageResources(removedImage);
+    }
+    if (removedResult) {
+      (removedResult as { blob?: Blob }).blob = undefined;
+    }
   }, []);
 
   const handleReorderImages = useCallback((fromIndex: number, toIndex: number) => {
@@ -158,22 +149,23 @@ export default function App() {
   }, []);
 
   const handleClearAll = useCallback(() => {
-    // Clean up all image and result resources before clearing
-    setImages((prev) => {
-      prev.forEach(cleanupImageResources);
-      return [];
-    });
-    setResults((prev) => {
-      prev.forEach((result) => {
-        (result as { blob?: Blob }).blob = undefined;
-      });
-      return [];
-    });
-    
+    // Capture references before clearing state
+    const imagesToCleanup = images;
+    const resultsToCleanup = results;
+
+    // Clear state first (no mutations inside setters)
+    setImages([]);
+    setResults([]);
     setSelectedId(null);
     setMemoryWarning(false);
     resetState();
-  }, [resetState]);
+
+    // Clean up resources after state updates
+    imagesToCleanup.forEach(cleanupImageResources);
+    resultsToCleanup.forEach((result) => {
+      (result as { blob?: Blob }).blob = undefined;
+    });
+  }, [images, results, resetState]);
 
   const handleAddMore = useCallback(() => {
     fileInputRef.current?.click();
@@ -410,8 +402,6 @@ export default function App() {
                 images={images}
                 isProcessing={isProcessing}
                 progress={progress}
-                currentIndex={currentIndex}
-                totalCount={totalCount}
                 onProcess={handleProcess}
                 onCancel={handleCancel}
                 onOpenImages={() => setIsImagesDrawerOpen(true)}
@@ -467,10 +457,11 @@ export default function App() {
                     currentBorder={borderSettings}
                     currentResize={resizeSettings}
                     currentOutput={outputSettings}
-                    onApply={(border, resize, output) => {
+                    onApply={(border, resize, output, aspectRatio) => {
                       setBorderSettings(border);
                       if (resize) setResizeSettings(resize);
                       if (output) setOutputSettings(output);
+                      setTargetAspectRatio(aspectRatio);
                     }}
                   />
                 </div>

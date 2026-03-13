@@ -44,6 +44,12 @@ export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBac
   const [sliderPosition, setSliderPosition] = useState(50);
   const [isDragging, setIsDragging] = useState(false);
   const [swapped, setSwapped] = useState(false);
+
+  useEffect(() => {
+    setZoom('fit');
+    setSliderPosition(50);
+  }, [image?.id]);
+
   const [isCopying, setIsCopying] = useState(false);
 
   // Cache decoded image to avoid expensive re-decode on every settings change
@@ -90,8 +96,9 @@ export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBac
     canvas.width = scaledWidth;
     canvas.height = scaledHeight;
 
-    const ctx = canvas.getContext('2d')!;
-    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
     // Clear the canvas explicitly
     ctx.clearRect(0, 0, scaledWidth, scaledHeight);
 
@@ -157,6 +164,8 @@ export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBac
       if (previewMode === 'side-by-side') {
         containerWidth = (containerWidth - 16) / 2;
       }
+
+      if (containerWidth <= 0 || containerHeight <= 0) return;
 
       const isComparisonMode = previewMode === 'side-by-side' || previewMode === 'slider';
 
@@ -279,7 +288,7 @@ export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBac
     <div className="flex flex-col h-full">
       <div
         ref={containerRef}
-        className={`flex-1 flex items-center justify-center p-4 overflow-auto ${canvasBackground.mode === 'checkerboard' ? 'checkerboard' : ''}`}
+        className={`flex-1 flex items-center justify-center p-4 overflow-auto relative ${canvasBackground.mode === 'checkerboard' ? 'checkerboard' : ''}`}
         style={canvasBackground.mode === 'solid' ? { backgroundColor: canvasBackground.color } : undefined}
       >
         {isLoading && (

@@ -15,8 +15,25 @@ function loadFromStorage(): Preset[] {
         p !== null &&
         typeof p.id === 'string' &&
         typeof p.name === 'string' &&
-        typeof p.border === 'object'
-    );
+        typeof p.border === 'object' &&
+        p.border !== null &&
+        typeof p.border.width === 'number' &&
+        typeof p.border.widthUnit === 'string' &&
+        typeof p.border.color === 'string' &&
+        typeof p.border.aspectAware === 'boolean'
+    ).map((p) => ({
+      ...p,
+      border: {
+        ...p.border,
+        borderMode: p.border.borderMode ?? 'solid',
+        gradientAngle: p.border.gradientAngle ?? 45,
+        gradientStops: (p.border.gradientStops ?? []).map((s: { id?: string; color: string; position: number }, i: number) => ({
+          id: s.id ?? `migrated-${p.id}-${i}`,
+          color: s.color,
+          position: s.position,
+        })),
+      },
+    }));
   } catch {
     return [];
   }
@@ -59,9 +76,11 @@ export function useCustomPresets() {
   );
 
   const renamePreset = useCallback((id: string, name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
     setCustomPresets((prev) => {
       const updated = prev.map((p) =>
-        p.id === id ? { ...p, name: name.trim() } : p
+        p.id === id ? { ...p, name: trimmed } : p
       );
       saveToStorage(updated);
       return updated;

@@ -60,6 +60,11 @@ function createRadialGradient(
 
 function applyStops(gradient: CanvasGradient, stops: GradientStop[]): void {
   const sorted = [...stops].sort((a, b) => a.position - b.position);
+  if (sorted.length === 0) {
+    gradient.addColorStop(0, '#FFFFFF');
+    gradient.addColorStop(1, '#000000');
+    return;
+  }
   for (const stop of sorted) {
     gradient.addColorStop(stop.position / 100, stop.color);
   }
@@ -84,42 +89,42 @@ export const GRADIENT_PRESETS: { id: string; name: string; stops: GradientStop[]
   {
     id: 'sunset',
     name: 'Sunset',
-    stops: [{ color: '#FF6B6B', position: 0 }, { color: '#FFE66D', position: 100 }],
+    stops: [{ id: 'sunset-0', color: '#FF6B6B', position: 0 }, { id: 'sunset-1', color: '#FFE66D', position: 100 }],
     angle: 135,
     mode: 'linear-gradient',
   },
   {
     id: 'ocean',
     name: 'Ocean',
-    stops: [{ color: '#2193B0', position: 0 }, { color: '#6DD5ED', position: 100 }],
+    stops: [{ id: 'ocean-0', color: '#2193B0', position: 0 }, { id: 'ocean-1', color: '#6DD5ED', position: 100 }],
     angle: 135,
     mode: 'linear-gradient',
   },
   {
     id: 'neon',
     name: 'Neon',
-    stops: [{ color: '#A855F7', position: 0 }, { color: '#06B6D4', position: 100 }],
+    stops: [{ id: 'neon-0', color: '#A855F7', position: 0 }, { id: 'neon-1', color: '#06B6D4', position: 100 }],
     angle: 90,
     mode: 'linear-gradient',
   },
   {
     id: 'pastel',
     name: 'Pastel',
-    stops: [{ color: '#FBCFE8', position: 0 }, { color: '#BAE6FD', position: 100 }],
+    stops: [{ id: 'pastel-0', color: '#FBCFE8', position: 0 }, { id: 'pastel-1', color: '#BAE6FD', position: 100 }],
     angle: 45,
     mode: 'linear-gradient',
   },
   {
     id: 'forest',
     name: 'Forest',
-    stops: [{ color: '#134E5E', position: 0 }, { color: '#71B280', position: 100 }],
+    stops: [{ id: 'forest-0', color: '#134E5E', position: 0 }, { id: 'forest-1', color: '#71B280', position: 100 }],
     angle: 135,
     mode: 'linear-gradient',
   },
   {
     id: 'radial-glow',
     name: 'Glow',
-    stops: [{ color: '#FFFFFF', position: 0 }, { color: '#6B7280', position: 100 }],
+    stops: [{ id: 'glow-0', color: '#FFFFFF', position: 0 }, { id: 'glow-1', color: '#6B7280', position: 100 }],
     angle: 0,
     mode: 'radial-gradient',
   },

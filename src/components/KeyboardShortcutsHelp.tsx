@@ -6,7 +6,7 @@ const modKey = isMac ? '⌘' : 'Ctrl';
 const SHORTCUTS = [
   { keys: [`${modKey}`, 'Enter'], description: 'Process images' },
   { keys: ['↑', '↓'], description: 'Navigate image queue' },
-  { keys: ['Del'], description: 'Remove selected image' },
+  { keys: [isMac ? '⌫' : 'Del'], description: 'Remove selected image' },
   { keys: ['Esc'], description: 'Deselect image' },
 ];
 

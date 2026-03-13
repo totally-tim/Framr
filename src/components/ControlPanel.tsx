@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import type { BorderSettings, BorderMode, ResizeSettings, OutputSettings, CanvasBackground, TextOverlaySettings, TextPosition } from '../types';
 import { PRESET_COLORS, CANVAS_BACKGROUND_COLORS, isValidHex, normalizeHex } from '../utils/colorUtils';
 import { GRADIENT_PRESETS, gradientToCss } from '../utils/gradientUtils';
+import { createGradientStop } from '../utils/constants';
 
 const TEXT_POSITIONS: { value: TextPosition; label: string }[] = [
   { value: 'bottom-center', label: 'Bottom Center' },
@@ -40,7 +41,18 @@ export function ControlPanel({
   const [showTextOverlay, setShowTextOverlay] = useState(false);
   const [overlayColorInput, setOverlayColorInput] = useState(textOverlay.color);
   const [colorInput, setColorInput] = useState(borderSettings.color);
+  const [prevBorderColor, setPrevBorderColor] = useState(borderSettings.color);
+  if (borderSettings.color !== prevBorderColor) {
+    setPrevBorderColor(borderSettings.color);
+    setColorInput(borderSettings.color);
+  }
+
   const [canvasBgInput, setCanvasBgInput] = useState(canvasBackground.color);
+  const [prevCanvasBgColor, setPrevCanvasBgColor] = useState(canvasBackground.color);
+  if (canvasBackground.color !== prevCanvasBgColor) {
+    setPrevCanvasBgColor(canvasBackground.color);
+    setCanvasBgInput(canvasBackground.color);
+  }
 
   const handleWidthChange = useCallback((value: number) => {
     onBorderChange({ ...borderSettings, width: value });
@@ -255,7 +267,7 @@ export function ControlPanel({
             <div className="space-y-2">
               <label className="text-xs text-gray-500 dark:text-gray-400">Color Stops</label>
               {borderSettings.gradientStops.map((stop, idx) => (
-                <div key={idx} className="flex items-center gap-2">
+                <div key={stop.id} className="flex items-center gap-2">
                   <input
                     type="color"
                     value={stop.color}
@@ -301,7 +313,7 @@ export function ControlPanel({
               {borderSettings.gradientStops.length < 5 && (
                 <button
                   onClick={() => {
-                    const stops = [...borderSettings.gradientStops, { color: '#888888', position: 50 }];
+                    const stops = [...borderSettings.gradientStops, createGradientStop('#888888', 50)];
                     onBorderChange({ ...borderSettings, gradientStops: stops });
                   }}
                   className="text-xs text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
