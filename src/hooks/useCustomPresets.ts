@@ -25,6 +25,8 @@ function loadFromStorage(): Preset[] {
       ...p,
       border: {
         ...p.border,
+        borderMode: p.border.borderMode ?? 'solid',
+        gradientAngle: p.border.gradientAngle ?? 45,
         gradientStops: (p.border.gradientStops ?? []).map((s: { id?: string; color: string; position: number }, i: number) => ({
           id: s.id ?? `migrated-${p.id}-${i}`,
           color: s.color,

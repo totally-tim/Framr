@@ -60,6 +60,11 @@ function createRadialGradient(
 
 function applyStops(gradient: CanvasGradient, stops: GradientStop[]): void {
   const sorted = [...stops].sort((a, b) => a.position - b.position);
+  if (sorted.length === 0) {
+    gradient.addColorStop(0, '#FFFFFF');
+    gradient.addColorStop(1, '#000000');
+    return;
+  }
   for (const stop of sorted) {
     gradient.addColorStop(stop.position / 100, stop.color);
   }
