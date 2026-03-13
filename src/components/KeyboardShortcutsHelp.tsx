@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform);
 const modKey = isMac ? '⌘' : 'Ctrl';
@@ -13,6 +13,21 @@ const SHORTCUTS = [
 export function KeyboardShortcutsHelp() {
   const [open, setOpen] = useState(false);
 
+  const close = useCallback(() => setOpen(false), []);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        close();
+      }
+    };
+    // Use capture phase to intercept before global shortcuts
+    document.addEventListener('keydown', handleKeyDown, true);
+    return () => document.removeEventListener('keydown', handleKeyDown, true);
+  }, [open, close]);
+
   return (
     <div className="relative">
       <button
@@ -26,8 +41,8 @@ export function KeyboardShortcutsHelp() {
 
       {open && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 bottom-8 z-50 bg-white dark:bg-gray-900 border rounded-xl shadow-xl p-4 w-56 animate-slide-up">
+          <div className="fixed inset-0 z-40" onClick={close} />
+          <div className="absolute right-0 top-8 z-50 bg-white dark:bg-gray-900 border rounded-xl shadow-xl p-4 w-56 animate-slide-up">
             <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-3 uppercase tracking-wide">
               Keyboard Shortcuts
             </h3>
