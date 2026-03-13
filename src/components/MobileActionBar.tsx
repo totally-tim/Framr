@@ -4,6 +4,8 @@ interface MobileActionBarProps {
   images: ImageFile[];
   isProcessing: boolean;
   progress: number;
+  currentIndex?: number;
+  totalCount?: number;
   onProcess: () => void;
   onCancel: () => void;
   onOpenImages: () => void;
@@ -15,6 +17,8 @@ export function MobileActionBar({
   images,
   isProcessing,
   progress,
+  currentIndex = 0,
+  totalCount = 0,
   onProcess,
   onCancel,
   onOpenImages,
@@ -29,11 +33,18 @@ export function MobileActionBar({
     <div className="fixed bottom-0 left-0 right-0 md:hidden bg-white dark:bg-gray-900 border-t shadow-lg safe-bottom z-40">
       {/* Progress bar when processing */}
       {isProcessing && (
-        <div className="h-1 bg-gray-200 dark:bg-gray-700">
-          <div
-            className="h-full bg-blue-500 transition-all duration-300"
-            style={{ width: `${progress}%` }}
-          />
+        <div>
+          <div className="h-1 bg-gray-200 dark:bg-gray-700">
+            <div
+              className="h-full bg-blue-500 transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          {totalCount > 0 && (
+            <div className="px-3 py-1 text-xs text-gray-500 dark:text-gray-400">
+              Image {currentIndex + 1} of {totalCount}
+            </div>
+          )}
         </div>
       )}
 

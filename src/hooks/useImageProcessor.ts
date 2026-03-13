@@ -81,6 +81,7 @@ export function useImageProcessor() {
             ...prev,
             currentIndex: i,
             progress: (i / images.length) * 100,
+            currentImageName: image.name,
           }));
 
           try {

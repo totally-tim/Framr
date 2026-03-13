@@ -1,18 +1,28 @@
 import { useState, useCallback } from 'react';
-import type { BorderSettings, BorderMode, ResizeSettings, OutputSettings, CanvasBackground } from '../types';
+import type { BorderSettings, BorderMode, ResizeSettings, OutputSettings, CanvasBackground, TextOverlaySettings, TextPosition } from '../types';
 import { PRESET_COLORS, CANVAS_BACKGROUND_COLORS, isValidHex, normalizeHex } from '../utils/colorUtils';
 import { GRADIENT_PRESETS, gradientToCss } from '../utils/gradientUtils';
 import { createGradientStop } from '../utils/constants';
+
+const TEXT_POSITIONS: { value: TextPosition; label: string }[] = [
+  { value: 'bottom-center', label: 'Bottom Center' },
+  { value: 'top-center', label: 'Top Center' },
+  { value: 'bottom-left', label: 'Bottom Left' },
+  { value: 'bottom-right', label: 'Bottom Right' },
+  { value: 'top-left', label: 'Top Left' },
+];
 
 interface ControlPanelProps {
   borderSettings: BorderSettings;
   resizeSettings: ResizeSettings;
   outputSettings: OutputSettings;
   canvasBackground: CanvasBackground;
+  textOverlay: TextOverlaySettings;
   onBorderChange: (settings: BorderSettings) => void;
   onResizeChange: (settings: ResizeSettings) => void;
   onOutputChange: (settings: OutputSettings) => void;
   onCanvasBackgroundChange: (settings: CanvasBackground) => void;
+  onTextOverlayChange: (settings: TextOverlaySettings) => void;
 }
 
 export function ControlPanel({
@@ -20,12 +30,16 @@ export function ControlPanel({
   resizeSettings,
   outputSettings,
   canvasBackground,
+  textOverlay,
   onBorderChange,
   onResizeChange,
   onOutputChange,
   onCanvasBackgroundChange,
+  onTextOverlayChange,
 }: ControlPanelProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showTextOverlay, setShowTextOverlay] = useState(false);
+  const [overlayColorInput, setOverlayColorInput] = useState(textOverlay.color);
   const [colorInput, setColorInput] = useState(borderSettings.color);
   const [prevBorderColor, setPrevBorderColor] = useState(borderSettings.color);
   if (borderSettings.color !== prevBorderColor) {
@@ -374,6 +388,161 @@ export function ControlPanel({
                 />
               ))}
             </div>
+          </div>
+        )}
+      </div>
+
+      <div className="border-t pt-4">
+        <button
+          onClick={() => setShowTextOverlay(!showTextOverlay)}
+          className="flex items-center justify-between w-full py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+        >
+          <span>Text Overlay</span>
+          <svg
+            className={`w-4 h-4 transition-transform ${showTextOverlay ? 'rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        {showTextOverlay && (
+          <div className="mt-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <label className="text-sm text-gray-600 dark:text-gray-300">Enable</label>
+              <button
+                onClick={() => onTextOverlayChange({ ...textOverlay, enabled: !textOverlay.enabled })}
+                className={`relative w-11 h-6 rounded-full transition-colors ${textOverlay.enabled ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+              >
+                <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${textOverlay.enabled ? 'translate-x-5' : ''}`} />
+              </button>
+            </div>
+
+            {textOverlay.enabled && (
+              <>
+                <div className="space-y-1">
+                  <label className="text-xs text-gray-500 dark:text-gray-400">Text</label>
+                  <input
+                    type="text"
+                    value={textOverlay.text}
+                    onChange={(e) => onTextOverlayChange({ ...textOverlay, text: e.target.value })}
+                    className="w-full px-3 py-2 text-sm rounded border bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Your text here..."
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs text-gray-500 dark:text-gray-400">Position</label>
+                  <select
+                    value={textOverlay.position}
+                    onChange={(e) => onTextOverlayChange({ ...textOverlay, position: e.target.value as TextPosition })}
+                    className="w-full px-3 py-2 text-sm rounded border bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {TEXT_POSITIONS.map((p) => (
+                      <option key={p.value} value={p.value}>{p.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs text-gray-500 dark:text-gray-400">Font Family</label>
+                  <div className="flex rounded-lg overflow-hidden border">
+                    {(['sans-serif', 'serif', 'monospace'] as const).map((f) => (
+                      <button
+                        key={f}
+                        onClick={() => onTextOverlayChange({ ...textOverlay, fontFamily: f })}
+                        className={`flex-1 py-1.5 text-xs font-medium transition-colors ${textOverlay.fontFamily === f ? 'bg-blue-500 text-white' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                        style={{ fontFamily: f }}
+                      >
+                        {f === 'sans-serif' ? 'Sans' : f === 'serif' ? 'Serif' : 'Mono'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-gray-500 dark:text-gray-400">Size</label>
+                    <span className="text-xs text-gray-600 dark:text-gray-300">{textOverlay.fontSize.toFixed(1)}×</span>
+                  </div>
+                  <input
+                    type="range"
+                    value={textOverlay.fontSize}
+                    onChange={(e) => onTextOverlayChange({ ...textOverlay, fontSize: parseFloat(e.target.value) })}
+                    className="slider w-full"
+                    min={0.5}
+                    max={2.0}
+                    step={0.1}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <label className="text-xs text-gray-500 dark:text-gray-400">Auto Contrast Color</label>
+                  <button
+                    onClick={() => onTextOverlayChange({ ...textOverlay, useAutoColor: !textOverlay.useAutoColor })}
+                    className={`relative w-9 h-5 rounded-full transition-colors ${textOverlay.useAutoColor ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                  >
+                    <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${textOverlay.useAutoColor ? 'translate-x-4' : ''}`} />
+                  </button>
+                </div>
+
+                {!textOverlay.useAutoColor && (
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-500 dark:text-gray-400">Color</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={textOverlay.color}
+                        onChange={(e) => {
+                          setOverlayColorInput(e.target.value);
+                          onTextOverlayChange({ ...textOverlay, color: e.target.value });
+                        }}
+                        className="w-10 h-10 rounded border cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={overlayColorInput}
+                        onChange={(e) => {
+                          setOverlayColorInput(e.target.value);
+                          if (isValidHex(e.target.value)) {
+                            onTextOverlayChange({ ...textOverlay, color: normalizeHex(e.target.value) });
+                          }
+                        }}
+                        onBlur={() => {
+                          if (isValidHex(overlayColorInput)) {
+                            const n = normalizeHex(overlayColorInput);
+                            setOverlayColorInput(n);
+                            onTextOverlayChange({ ...textOverlay, color: n });
+                          } else {
+                            setOverlayColorInput(textOverlay.color);
+                          }
+                        }}
+                        className="flex-1 px-3 py-2 text-sm rounded border bg-white dark:bg-gray-800 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="#000000"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-gray-500 dark:text-gray-400">Opacity</label>
+                    <span className="text-xs text-gray-600 dark:text-gray-300">{Math.round(textOverlay.opacity * 100)}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    value={textOverlay.opacity}
+                    onChange={(e) => onTextOverlayChange({ ...textOverlay, opacity: parseFloat(e.target.value) })}
+                    className="slider w-full"
+                    min={0.1}
+                    max={1.0}
+                    step={0.05}
+                  />
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
