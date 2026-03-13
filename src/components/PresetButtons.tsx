@@ -222,7 +222,12 @@ export function PresetButtons({ currentBorder, currentResize, currentOutput, onA
                     value={renameValue}
                     onChange={(e) => setRenameValue(e.target.value)}
                     onKeyDown={(e) => handleRenameKeyDown(e, preset.id)}
-                    onBlur={() => { renamePreset(preset.id, renameValue); setRenamingId(null); }}
+                    onBlur={() => {
+                      if (renameValue.trim()) {
+                        renamePreset(preset.id, renameValue);
+                      }
+                      setRenamingId(null);
+                    }}
                     className="text-sm w-28 bg-transparent outline-none border-b border-current"
                     maxLength={40}
                   />

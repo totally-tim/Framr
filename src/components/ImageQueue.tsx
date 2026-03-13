@@ -36,6 +36,7 @@ export function ImageQueue({
   const [touchDraggingIndex, setTouchDraggingIndex] = useState<number | null>(null);
   const [touchDragOverIndex, setTouchDragOverIndex] = useState<number | null>(null);
   const isDraggingTouchRef = useRef(false);
+  const touchStartPosRef = useRef<{x: number, y: number} | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   // Prevent scroll during touch drag (non-passive listener required)
@@ -80,17 +81,24 @@ export function ImageQueue({
   }, []);
 
   // Touch drag handlers
-  const handleTouchStart = useCallback((_e: React.TouchEvent, index: number) => {
+  const handleTouchStart = useCallback((e: React.TouchEvent, index: number) => {
     touchDragIndexRef.current = index;
     touchDragOverIndexRef.current = index;
-    isDraggingTouchRef.current = true;
-    setTouchDraggingIndex(index);
-    setTouchDragOverIndex(index);
+    const touch = e.touches[0];
+    touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+    isDraggingTouchRef.current = false;
   }, []);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!isDraggingTouchRef.current) return;
     const touch = e.touches[0];
+    if (!isDraggingTouchRef.current && touchStartPosRef.current) {
+      const dx = touch.clientX - touchStartPosRef.current.x;
+      const dy = touch.clientY - touchStartPosRef.current.y;
+      if (Math.abs(dx) + Math.abs(dy) < 10) return;
+      isDraggingTouchRef.current = true;
+      setTouchDraggingIndex(touchDragIndexRef.current);
+    }
+    if (!isDraggingTouchRef.current) return;
     const el = document.elementFromPoint(touch.clientX, touch.clientY);
     const itemEl = el?.closest('[data-drag-index]');
     if (itemEl) {
@@ -111,6 +119,7 @@ export function ImageQueue({
     touchDragIndexRef.current = null;
     touchDragOverIndexRef.current = null;
     isDraggingTouchRef.current = false;
+    touchStartPosRef.current = null;
     setTouchDraggingIndex(null);
     setTouchDragOverIndex(null);
   }, [onReorderImages]);

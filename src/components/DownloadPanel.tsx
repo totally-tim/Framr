@@ -34,30 +34,18 @@ export function DownloadPanel({
   const doneCount = images.filter((img) => img.status === 'done').length;
   const errorCount = images.filter((img) => img.status === 'error').length;
 
-  const handleDownloadAll = useCallback(async () => {
+  const handleDownloadAll = useCallback(() => {
     if (results.length === 0) return;
 
-    if (results.length === 1) {
-      downloadSingle(results[0].blob, results[0].filename);
-      onToast?.('Download started', 'info');
-      return;
-    }
-
-    setIsZipping(true);
-    setZipProgress(0);
-
-    try {
-      await downloadAsZip(results, generateZipFilename(), (progress) => {
-        setZipProgress(progress);
-      });
-      onToast?.(`ZIP downloaded (${results.length} images)`, 'success');
-    } catch (error) {
-      console.error('ZIP creation failed:', error);
-      onToast?.('ZIP download failed', 'error');
-    } finally {
-      setIsZipping(false);
-      setZipProgress(0);
-    }
+    results.forEach((result) => {
+      downloadSingle(result.blob, result.filename);
+    });
+    onToast?.(
+      results.length === 1
+        ? 'Download started'
+        : `${results.length} downloads started`,
+      'info'
+    );
   }, [results, onToast]);
 
   const handleDownloadZip = useCallback(async () => {
@@ -175,7 +163,7 @@ export function DownloadPanel({
         </div>
       )}
 
-      {!isProcessing && pendingCount === 0 && doneCount === 0 && images.length > 0 && (
+      {!isProcessing && pendingCount === 0 && doneCount > 0 && images.length > 0 && (
         <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
           All images processed
         </p>

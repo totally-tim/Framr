@@ -15,7 +15,12 @@ function loadFromStorage(): Preset[] {
         p !== null &&
         typeof p.id === 'string' &&
         typeof p.name === 'string' &&
-        typeof p.border === 'object'
+        typeof p.border === 'object' &&
+        p.border !== null &&
+        typeof p.border.width === 'number' &&
+        typeof p.border.widthUnit === 'string' &&
+        typeof p.border.color === 'string' &&
+        typeof p.border.aspectAware === 'boolean'
     );
   } catch {
     return [];
@@ -59,6 +64,7 @@ export function useCustomPresets() {
   );
 
   const renamePreset = useCallback((id: string, name: string) => {
+    if (!name.trim()) return;
     setCustomPresets((prev) => {
       const updated = prev.map((p) =>
         p.id === id ? { ...p, name: name.trim() } : p
