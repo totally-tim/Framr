@@ -25,6 +25,7 @@ export function useImageProcessor() {
 
   const workerRef = useRef<Worker | null>(null);
   const cancelledRef = useRef(false);
+  const isProcessingRef = useRef(false);
 
   useEffect(() => {
     const worker = new Worker(
@@ -49,6 +50,11 @@ export function useImageProcessor() {
         return [];
       }
 
+      if (isProcessingRef.current) {
+        return [];
+      }
+
+      isProcessingRef.current = true;
       cancelledRef.current = false;
 
       setState({
@@ -63,74 +69,76 @@ export function useImageProcessor() {
 
       const results: ProcessingResult[] = [];
 
-      for (let i = 0; i < images.length; i++) {
-        if (cancelledRef.current) {
-          break;
+      try {
+        for (let i = 0; i < images.length; i++) {
+          if (cancelledRef.current) {
+            break;
+          }
+
+          const image = images[i];
+
+          setState((prev) => ({
+            ...prev,
+            currentIndex: i,
+            progress: (i / images.length) * 100,
+          }));
+
+          try {
+            const img = await loadImage(image.file);
+            const bitmap = await createImageBitmap(img);
+
+            const result = await new Promise<ProcessingResult>((resolve, reject) => {
+              const handler = (event: MessageEvent) => {
+                const data = event.data;
+
+                if (data.imageId !== image.id) return;
+
+                if (data.type === 'result') {
+                  workerRef.current?.removeEventListener('message', handler);
+                  resolve({
+                    imageId: data.imageId,
+                    blob: data.blob,
+                    filename: data.filename,
+                  });
+                } else if (data.type === 'error') {
+                  workerRef.current?.removeEventListener('message', handler);
+                  reject(new Error(data.error));
+                } else if (data.type === 'progress') {
+                  const imageProgress = data.progress;
+                  const overallProgress = ((i + imageProgress / 100) / images.length) * 100;
+                  setState((prev) => ({ ...prev, progress: overallProgress }));
+                }
+              };
+
+              workerRef.current?.addEventListener('message', handler);
+
+              workerRef.current?.postMessage({
+                type: 'process',
+                imageBitmap: bitmap,
+                config,
+                originalFormat: image.name,
+                filename: image.name,
+                imageId: image.id,
+              }, [bitmap]);
+            });
+
+            results.push(result);
+            onImageComplete?.(image.id, result);
+
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Processing failed';
+            onImageError?.(image.id, errorMessage);
+          }
         }
-
-        const image = images[i];
-
+      } finally {
+        isProcessingRef.current = false;
         setState((prev) => ({
           ...prev,
-          currentIndex: i,
-          progress: (i / images.length) * 100,
-          currentImageName: image.name,
+          isProcessing: false,
+          progress: cancelledRef.current ? prev.progress : 100,
+          results,
         }));
-
-        try {
-          const img = await loadImage(image.file);
-          const bitmap = await createImageBitmap(img);
-
-          const result = await new Promise<ProcessingResult>((resolve, reject) => {
-            const handler = (event: MessageEvent) => {
-              const data = event.data;
-
-              if (data.imageId !== image.id) return;
-
-              if (data.type === 'result') {
-                workerRef.current?.removeEventListener('message', handler);
-                resolve({
-                  imageId: data.imageId,
-                  blob: data.blob,
-                  filename: data.filename,
-                });
-              } else if (data.type === 'error') {
-                workerRef.current?.removeEventListener('message', handler);
-                reject(new Error(data.error));
-              } else if (data.type === 'progress') {
-                const imageProgress = data.progress;
-                const overallProgress = ((i + imageProgress / 100) / images.length) * 100;
-                setState((prev) => ({ ...prev, progress: overallProgress }));
-              }
-            };
-
-            workerRef.current?.addEventListener('message', handler);
-
-            workerRef.current?.postMessage({
-              type: 'process',
-              imageBitmap: bitmap,
-              config,
-              originalFormat: image.name,
-              filename: image.name,
-              imageId: image.id,
-            }, [bitmap]);
-          });
-
-          results.push(result);
-          onImageComplete?.(image.id, result);
-
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Processing failed';
-          onImageError?.(image.id, errorMessage);
-        }
       }
-
-      setState((prev) => ({
-        ...prev,
-        isProcessing: false,
-        progress: 100,
-        results,
-      }));
 
       return results;
     },
@@ -139,7 +147,7 @@ export function useImageProcessor() {
 
   const cancelProcessing = useCallback(() => {
     cancelledRef.current = true;
-    setState((prev) => ({ ...prev, cancelled: true, isProcessing: false }));
+    setState((prev) => ({ ...prev, cancelled: true }));
   }, []);
 
   const resetState = useCallback(() => {

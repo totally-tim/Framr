@@ -95,13 +95,12 @@ export default function App() {
   }, []);
 
   const handleRemoveImage = useCallback((id: string) => {
+    // Capture references before state updates for cleanup after
+    let removedImage: ImageFile | undefined;
+    let removedResult: ProcessingResult | undefined;
+
     setImages((prev) => {
-      // Find and clean up the removed image
-      const removedImage = prev.find((img) => img.id === id);
-      if (removedImage) {
-        cleanupImageResources(removedImage);
-      }
-      
+      removedImage = prev.find((img) => img.id === id);
       const updated = prev.filter((img) => img.id !== id);
       setMemoryWarning(checkMemoryWarning(updated));
 
@@ -115,13 +114,17 @@ export default function App() {
     });
 
     setResults((prev) => {
-      // Clean up blob from removed result
-      const removedResult = prev.find((r) => r.imageId === id);
-      if (removedResult) {
-        (removedResult as { blob?: Blob }).blob = undefined;
-      }
+      removedResult = prev.find((r) => r.imageId === id);
       return prev.filter((r) => r.imageId !== id);
     });
+
+    // Clean up resources after state updates (no mutation inside setters)
+    if (removedImage) {
+      cleanupImageResources(removedImage);
+    }
+    if (removedResult) {
+      (removedResult as { blob?: Blob }).blob = undefined;
+    }
   }, []);
 
   const handleReorderImages = useCallback((fromIndex: number, toIndex: number) => {
@@ -134,22 +137,23 @@ export default function App() {
   }, []);
 
   const handleClearAll = useCallback(() => {
-    // Clean up all image and result resources before clearing
-    setImages((prev) => {
-      prev.forEach(cleanupImageResources);
-      return [];
-    });
-    setResults((prev) => {
-      prev.forEach((result) => {
-        (result as { blob?: Blob }).blob = undefined;
-      });
-      return [];
-    });
-    
+    // Capture references before clearing state
+    const imagesToCleanup = images;
+    const resultsToCleanup = results;
+
+    // Clear state first (no mutations inside setters)
+    setImages([]);
+    setResults([]);
     setSelectedId(null);
     setMemoryWarning(false);
     resetState();
-  }, [resetState]);
+
+    // Clean up resources after state updates
+    imagesToCleanup.forEach(cleanupImageResources);
+    resultsToCleanup.forEach((result) => {
+      (result as { blob?: Blob }).blob = undefined;
+    });
+  }, [images, results, resetState]);
 
   const handleAddMore = useCallback(() => {
     fileInputRef.current?.click();
