@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
-import type { ImageFile, BorderSettings, ResizeSettings, OutputSettings, ProcessingResult, CanvasBackground, Toast, ToastVariant } from '../types';
+import type { AspectRatio, BorderSettings, ImageFile, ResizeSettings, OutputSettings, ProcessingResult, CanvasBackground, Toast, ToastVariant } from '../types';
 import { createImageFile, checkMemoryWarning, cleanupImageResources } from '../utils/imageUtils';
+import { DEFAULT_BORDER_SETTINGS } from '../utils/constants';
 import { useTheme } from '../hooks/useTheme';
 import { useImageProcessor } from '../hooks/useImageProcessor';
 import { DropZone } from './DropZone';
@@ -13,13 +14,8 @@ import { ThemeToggle } from './ThemeToggle';
 import { MobileDrawer } from './MobileDrawer';
 import { MobileActionBar } from './MobileActionBar';
 import { ToastContainer } from './Toast';
-
-const DEFAULT_BORDER_SETTINGS: BorderSettings = {
-  width: 5,
-  widthUnit: '%',
-  color: '#FFFFFF',
-  aspectAware: false,
-};
+import { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
 const DEFAULT_RESIZE_SETTINGS: ResizeSettings = {
   enabled: false,
@@ -44,6 +40,7 @@ export default function App() {
   const [borderSettings, setBorderSettings] = useState<BorderSettings>(DEFAULT_BORDER_SETTINGS);
   const [resizeSettings, setResizeSettings] = useState<ResizeSettings>(DEFAULT_RESIZE_SETTINGS);
   const [outputSettings, setOutputSettings] = useState<OutputSettings>(DEFAULT_OUTPUT_SETTINGS);
+  const [targetAspectRatio, setTargetAspectRatio] = useState<AspectRatio | undefined>(undefined);
   const [canvasBackground, setCanvasBackground] = useState<CanvasBackground>(DEFAULT_CANVAS_BACKGROUND);
   const [results, setResults] = useState<ProcessingResult[]>([]);
   const [memoryWarning, setMemoryWarning] = useState(false);
@@ -176,6 +173,7 @@ export default function App() {
       border: borderSettings,
       resize: resizeSettings,
       output: outputSettings,
+      targetAspectRatio,
     };
 
     let doneCount = 0;
@@ -215,7 +213,7 @@ export default function App() {
         'error'
       );
     }
-  }, [images, borderSettings, resizeSettings, outputSettings, processImages, addToast]);
+  }, [images, borderSettings, resizeSettings, outputSettings, targetAspectRatio, processImages, addToast]);
 
   const handleCancel = useCallback(() => {
     cancelProcessing();
@@ -226,8 +224,31 @@ export default function App() {
     );
   }, [cancelProcessing]);
 
-  const selectedImage = images.find((img) => img.id === selectedId) || null;
   const hasImages = images.length > 0;
+
+  const handleNavigate = useCallback((direction: 'up' | 'down') => {
+    if (images.length === 0) return;
+    const currentIndex = images.findIndex((img) => img.id === selectedId);
+    if (direction === 'up') {
+      const newIndex = currentIndex <= 0 ? images.length - 1 : currentIndex - 1;
+      setSelectedId(images[newIndex].id);
+    } else {
+      const newIndex = currentIndex >= images.length - 1 ? 0 : currentIndex + 1;
+      setSelectedId(images[newIndex].id);
+    }
+  }, [images, selectedId]);
+
+  useKeyboardShortcuts({
+    onProcess: handleProcess,
+    onRemoveSelected: () => { if (selectedId) handleRemoveImage(selectedId); },
+    onNavigate: handleNavigate,
+    onDeselect: () => setSelectedId(null),
+    hasImages,
+    selectedId,
+    isProcessing,
+  });
+
+  const selectedImage = images.find((img) => img.id === selectedId) || null;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -253,6 +274,7 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-2">
+          <KeyboardShortcutsHelp />
           <ThemeToggle theme={theme} onToggle={toggleTheme} />
           <a
             href="https://github.com/totally-tim/framr"
@@ -331,6 +353,7 @@ export default function App() {
                   borderSettings={borderSettings}
                   resizeSettings={resizeSettings}
                   canvasBackground={canvasBackground}
+                  targetAspectRatio={targetAspectRatio}
                   onToast={addToast}
                 />
               </div>
@@ -341,10 +364,11 @@ export default function App() {
                   currentBorder={borderSettings}
                   currentResize={resizeSettings}
                   currentOutput={outputSettings}
-                  onApply={(border, resize, output) => {
+                  onApply={(border, resize, output, aspectRatio) => {
                     setBorderSettings(border);
                     if (resize) setResizeSettings(resize);
                     if (output) setOutputSettings(output);
+                    setTargetAspectRatio(aspectRatio);
                   }}
                 />
               </div>
@@ -362,8 +386,6 @@ export default function App() {
                 images={images}
                 isProcessing={isProcessing}
                 progress={progress}
-                currentIndex={currentIndex}
-                totalCount={totalCount}
                 onProcess={handleProcess}
                 onCancel={handleCancel}
                 onOpenImages={() => setIsImagesDrawerOpen(true)}
@@ -417,10 +439,11 @@ export default function App() {
                     currentBorder={borderSettings}
                     currentResize={resizeSettings}
                     currentOutput={outputSettings}
-                    onApply={(border, resize, output) => {
+                    onApply={(border, resize, output, aspectRatio) => {
                       setBorderSettings(border);
                       if (resize) setResizeSettings(resize);
                       if (output) setOutputSettings(output);
+                      setTargetAspectRatio(aspectRatio);
                     }}
                   />
                 </div>

@@ -1,6 +1,8 @@
 import { useRef, useEffect, useLayoutEffect, useState, useCallback } from 'react';
-import type { ImageFile, BorderSettings, ResizeSettings, CanvasBackground, PreviewMode, ToastVariant } from '../types';
+import type { AspectRatio, ImageFile, BorderSettings, ResizeSettings, CanvasBackground, PreviewMode, ToastVariant } from '../types';
 import { loadImage, calculateBorderSize, calculateOutputDimensions } from '../utils/imageUtils';
+import { calculateAspectRatioBorders } from '../utils/imageProcessing';
+import { applyBorderFill } from '../utils/gradientUtils';
 import { useDebounce } from '../hooks/useDebounce';
 
 interface PreviewCanvasProps {
@@ -8,6 +10,7 @@ interface PreviewCanvasProps {
   borderSettings: BorderSettings;
   resizeSettings: ResizeSettings;
   canvasBackground: CanvasBackground;
+  targetAspectRatio?: AspectRatio;
   onToast?: (message: string, variant?: ToastVariant) => void;
 }
 
@@ -20,7 +23,7 @@ const PREVIEW_MODES: { value: PreviewMode; label: string }[] = [
   { value: 'slider', label: 'Slider' },
 ];
 
-export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBackground, onToast }: PreviewCanvasProps) {
+export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBackground, targetAspectRatio, onToast }: PreviewCanvasProps) {
   // Source canvases - always hold Result and Original
   const resultCanvasRef = useRef<HTMLCanvasElement>(null);
   const originalCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -68,7 +71,9 @@ export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBac
 
     let border = { top: 0, right: 0, bottom: 0, left: 0 };
     if (borderMode !== 'none') {
-      border = calculateBorderSize(resizedWidth, resizedHeight, debouncedBorderSettings);
+      border = targetAspectRatio
+        ? calculateAspectRatioBorders(resizedWidth, resizedHeight, targetAspectRatio)
+        : calculateBorderSize(resizedWidth, resizedHeight, debouncedBorderSettings);
     }
 
     const fullWidth = resizedWidth + border.left + border.right;
@@ -96,8 +101,7 @@ export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBac
     ctx.clearRect(0, 0, scaledWidth, scaledHeight);
 
     if (borderMode === 'visible') {
-      ctx.fillStyle = debouncedBorderSettings.color;
-      ctx.fillRect(0, 0, scaledWidth, scaledHeight);
+      applyBorderFill(ctx, debouncedBorderSettings, scaledWidth, scaledHeight);
     }
 
     const imageX = Math.round(border.left * scale);
@@ -108,7 +112,7 @@ export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBac
     ctx.drawImage(img, imageX, imageY, imageW, imageH);
 
     return { scaledWidth, scaledHeight };
-  }, [debouncedBorderSettings, debouncedResizeSettings, zoom]);
+  }, [debouncedBorderSettings, debouncedResizeSettings, targetAspectRatio, zoom]);
 
   const renderPreview = useCallback(async () => {
     if (!image || !containerRef.current) return;

@@ -1,4 +1,4 @@
-import type { BorderSettings, ResizeSettings, OutputSettings, ImageFile } from '../types';
+import type { OutputSettings, ImageFile } from '../types';
 
 // Re-export shared utilities for convenience
 export {
@@ -10,7 +10,7 @@ export {
   generateOutputFilename,
 } from './imageProcessing';
 
-import { getFileExtension, getMimeType, calculateBorderSize, calculateOutputDimensions } from './imageProcessing';
+import { getFileExtension, getMimeType } from './imageProcessing';
 
 export const SUPPORTED_FORMATS = ['image/jpeg', 'image/png', 'image/tiff', 'image/webp'];
 export const MAX_PREVIEW_SIZE = 1200;
@@ -114,36 +114,6 @@ export async function createImageFile(file: File): Promise<ImageFile> {
     thumbnailUrl,
     status: 'pending',
   };
-}
-
-export function processImageOnCanvas(
-  img: HTMLImageElement,
-  borderSettings: BorderSettings,
-  resizeSettings: ResizeSettings
-): HTMLCanvasElement {
-  const { width: resizedWidth, height: resizedHeight } = calculateOutputDimensions(
-    img.width,
-    img.height,
-    resizeSettings
-  );
-
-  const border = calculateBorderSize(resizedWidth, resizedHeight, borderSettings);
-
-  const canvasWidth = resizedWidth + border.left + border.right;
-  const canvasHeight = resizedHeight + border.top + border.bottom;
-
-  const canvas = document.createElement('canvas');
-  canvas.width = canvasWidth;
-  canvas.height = canvasHeight;
-
-  const ctx = canvas.getContext('2d')!;
-
-  ctx.fillStyle = borderSettings.color;
-  ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-  ctx.drawImage(img, border.left, border.top, resizedWidth, resizedHeight);
-
-  return canvas;
 }
 
 export function canvasToBlob(

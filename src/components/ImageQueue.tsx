@@ -50,6 +50,7 @@ export function ImageQueue({
     return () => el.removeEventListener('touchmove', handler);
   }, []);
 
+
   // Desktop drag handlers
   const handleDragStart = useCallback((e: React.DragEvent, index: number) => {
     dragIndexRef.current = index;
@@ -113,7 +114,7 @@ export function ImageQueue({
   const handleTouchEnd = useCallback(() => {
     const fromIndex = touchDragIndexRef.current;
     const toIndex = touchDragOverIndexRef.current;
-    if (fromIndex !== null && toIndex !== null && fromIndex !== toIndex) {
+    if (isDraggingTouchRef.current && fromIndex !== null && toIndex !== null && fromIndex !== toIndex) {
       onReorderImages(fromIndex, toIndex);
     }
     touchDragIndexRef.current = null;

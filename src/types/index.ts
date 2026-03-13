@@ -10,11 +10,22 @@ export interface ImageFile {
   error?: string;
 }
 
+export interface GradientStop {
+  id: string;
+  color: string;
+  position: number; // 0–100
+}
+
+export type BorderMode = 'solid' | 'linear-gradient' | 'radial-gradient';
+
 export interface BorderSettings {
   width: number;
   widthUnit: 'px' | '%';
   color: string;
   aspectAware: boolean;
+  borderMode: BorderMode;
+  gradientStops: GradientStop[];
+  gradientAngle: number; // degrees, for linear gradient
 }
 
 export interface ResizeSettings {
@@ -30,10 +41,17 @@ export interface OutputSettings {
   quality: number;
 }
 
+export interface AspectRatio {
+  width: number;
+  height: number;
+}
+
 export interface ProcessingConfig {
   border: BorderSettings;
   resize: ResizeSettings;
   output: OutputSettings;
+  /** When set, borders are sized to achieve this aspect ratio instead of a fixed width. */
+  targetAspectRatio?: AspectRatio;
 }
 
 export interface Preset {
@@ -44,6 +62,8 @@ export interface Preset {
   resize?: ResizeSettings;
   output?: OutputSettings;
   isCustom?: boolean;
+  /** Social media aspect ratio — when set, borders fill to achieve this ratio. */
+  targetAspectRatio?: AspectRatio;
 }
 
 export interface ProcessingResult {
