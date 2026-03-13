@@ -41,6 +41,9 @@ export interface Preset {
   name: string;
   border: BorderSettings;
   description?: string;
+  resize?: ResizeSettings;
+  output?: OutputSettings;
+  isCustom?: boolean;
 }
 
 export interface ProcessingResult {
@@ -75,3 +78,11 @@ export interface WorkerResponse {
 }
 
 export type PreviewMode = 'processed' | 'original' | 'side-by-side' | 'slider';
+
+export type ToastVariant = 'success' | 'error' | 'info' | 'warning';
+
+export interface Toast {
+  id: string;
+  variant: ToastVariant;
+  message: string;
+}

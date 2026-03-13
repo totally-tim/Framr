@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import type { ImageFile, BorderSettings, ResizeSettings, OutputSettings, ProcessingResult, CanvasBackground } from '../types';
+import type { ImageFile, BorderSettings, ResizeSettings, OutputSettings, ProcessingResult, CanvasBackground, Toast, ToastVariant } from '../types';
 import { createImageFile, checkMemoryWarning, cleanupImageResources } from '../utils/imageUtils';
 import { useTheme } from '../hooks/useTheme';
 import { useImageProcessor } from '../hooks/useImageProcessor';
@@ -12,6 +12,7 @@ import { DownloadPanel } from './DownloadPanel';
 import { ThemeToggle } from './ThemeToggle';
 import { MobileDrawer } from './MobileDrawer';
 import { MobileActionBar } from './MobileActionBar';
+import { ToastContainer } from './Toast';
 
 const DEFAULT_BORDER_SETTINGS: BorderSettings = {
   width: 5,
@@ -48,12 +49,25 @@ export default function App() {
   const [memoryWarning, setMemoryWarning] = useState(false);
   const [isImagesDrawerOpen, setIsImagesDrawerOpen] = useState(false);
   const [isControlsDrawerOpen, setIsControlsDrawerOpen] = useState(false);
+  const [toasts, setToasts] = useState<Toast[]>([]);
+
+  const addToast = useCallback((message: string, variant: ToastVariant = 'info') => {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    setToasts((prev) => [...prev, { id, variant, message }]);
+  }, []);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
     isProcessing,
     progress,
+    currentIndex,
+    totalCount,
+    currentImageName,
     processImages,
     cancelProcessing,
     resetState,
@@ -84,13 +98,12 @@ export default function App() {
   }, []);
 
   const handleRemoveImage = useCallback((id: string) => {
+    // Capture references before state updates for cleanup after
+    let removedImage: ImageFile | undefined;
+    let removedResult: ProcessingResult | undefined;
+
     setImages((prev) => {
-      // Find and clean up the removed image
-      const removedImage = prev.find((img) => img.id === id);
-      if (removedImage) {
-        cleanupImageResources(removedImage);
-      }
-      
+      removedImage = prev.find((img) => img.id === id);
       const updated = prev.filter((img) => img.id !== id);
       setMemoryWarning(checkMemoryWarning(updated));
 
@@ -104,32 +117,46 @@ export default function App() {
     });
 
     setResults((prev) => {
-      // Clean up blob from removed result
-      const removedResult = prev.find((r) => r.imageId === id);
-      if (removedResult) {
-        (removedResult as { blob?: Blob }).blob = undefined;
-      }
+      removedResult = prev.find((r) => r.imageId === id);
       return prev.filter((r) => r.imageId !== id);
+    });
+
+    // Clean up resources after state updates (no mutation inside setters)
+    if (removedImage) {
+      cleanupImageResources(removedImage);
+    }
+    if (removedResult) {
+      (removedResult as { blob?: Blob }).blob = undefined;
+    }
+  }, []);
+
+  const handleReorderImages = useCallback((fromIndex: number, toIndex: number) => {
+    setImages((prev) => {
+      const updated = [...prev];
+      const [removed] = updated.splice(fromIndex, 1);
+      updated.splice(toIndex, 0, removed);
+      return updated;
     });
   }, []);
 
   const handleClearAll = useCallback(() => {
-    // Clean up all image and result resources before clearing
-    setImages((prev) => {
-      prev.forEach(cleanupImageResources);
-      return [];
-    });
-    setResults((prev) => {
-      prev.forEach((result) => {
-        (result as { blob?: Blob }).blob = undefined;
-      });
-      return [];
-    });
-    
+    // Capture references before clearing state
+    const imagesToCleanup = images;
+    const resultsToCleanup = results;
+
+    // Clear state first (no mutations inside setters)
+    setImages([]);
+    setResults([]);
     setSelectedId(null);
     setMemoryWarning(false);
     resetState();
-  }, [resetState]);
+
+    // Clean up resources after state updates
+    imagesToCleanup.forEach(cleanupImageResources);
+    resultsToCleanup.forEach((result) => {
+      (result as { blob?: Blob }).blob = undefined;
+    });
+  }, [images, results, resetState]);
 
   const handleAddMore = useCallback(() => {
     fileInputRef.current?.click();
@@ -151,10 +178,14 @@ export default function App() {
       output: outputSettings,
     };
 
+    let doneCount = 0;
+    let errorCount = 0;
+
     await processImages(
       pendingImages,
       config,
       (imageId, result) => {
+        doneCount++;
         setImages((prev) =>
           prev.map((img) =>
             img.id === imageId ? { ...img, status: 'done', processedBlob: result.blob } : img
@@ -163,6 +194,7 @@ export default function App() {
         setResults((prev) => [...prev, result]);
       },
       (imageId, error) => {
+        errorCount++;
         setImages((prev) =>
           prev.map((img) =>
             img.id === imageId ? { ...img, status: 'error', error } : img
@@ -170,7 +202,20 @@ export default function App() {
         );
       }
     );
-  }, [images, borderSettings, resizeSettings, outputSettings, processImages]);
+
+    if (doneCount > 0) {
+      addToast(
+        `${doneCount} image${doneCount !== 1 ? 's' : ''} processed successfully`,
+        'success'
+      );
+    }
+    if (errorCount > 0) {
+      addToast(
+        `${errorCount} image${errorCount !== 1 ? 's' : ''} failed to process`,
+        'error'
+      );
+    }
+  }, [images, borderSettings, resizeSettings, outputSettings, processImages, addToast]);
 
   const handleCancel = useCallback(() => {
     cancelProcessing();
@@ -227,13 +272,16 @@ export default function App() {
         {!hasImages ? (
           <div className="flex-1 flex items-center justify-center p-4 md:p-8">
             <div className="w-full max-w-2xl">
-              <DropZone onFilesSelected={handleFilesSelected} />
+              <DropZone onFilesSelected={handleFilesSelected} hasImages={false} />
             </div>
           </div>
         ) : (
           <>
             {/* Desktop sidebar - hidden on mobile */}
             <aside className="hidden md:flex w-72 xl:w-80 border-r bg-surface-light dark:bg-surface-dark flex-col overflow-hidden">
+              <div className="p-3 border-b">
+                <DropZone onFilesSelected={handleFilesSelected} hasImages={true} />
+              </div>
               <div className="flex-1 overflow-hidden flex flex-col">
                 <ImageQueue
                   images={images}
@@ -242,6 +290,7 @@ export default function App() {
                   onRemove={handleRemoveImage}
                   onAddMore={handleAddMore}
                   onClearAll={handleClearAll}
+                  onReorderImages={handleReorderImages}
                 />
               </div>
 
@@ -263,8 +312,12 @@ export default function App() {
                     results={results}
                     isProcessing={isProcessing}
                     progress={progress}
+                    currentIndex={currentIndex}
+                    totalCount={totalCount}
+                    currentImageName={currentImageName}
                     onProcess={handleProcess}
                     onCancel={handleCancel}
+                    onToast={addToast}
                   />
                 </div>
               </div>
@@ -278,14 +331,21 @@ export default function App() {
                   borderSettings={borderSettings}
                   resizeSettings={resizeSettings}
                   canvasBackground={canvasBackground}
+                  onToast={addToast}
                 />
               </div>
 
               {/* Desktop presets - hidden on mobile */}
               <div className="hidden md:block p-4 border-t bg-surface-light dark:bg-surface-dark">
                 <PresetButtons
-                  currentSettings={borderSettings}
-                  onApply={setBorderSettings}
+                  currentBorder={borderSettings}
+                  currentResize={resizeSettings}
+                  currentOutput={outputSettings}
+                  onApply={(border, resize, output) => {
+                    setBorderSettings(border);
+                    if (resize) setResizeSettings(resize);
+                    if (output) setOutputSettings(output);
+                  }}
                 />
               </div>
 
@@ -302,6 +362,8 @@ export default function App() {
                 images={images}
                 isProcessing={isProcessing}
                 progress={progress}
+                currentIndex={currentIndex}
+                totalCount={totalCount}
                 onProcess={handleProcess}
                 onCancel={handleCancel}
                 onOpenImages={() => setIsImagesDrawerOpen(true)}
@@ -327,6 +389,7 @@ export default function App() {
                   onRemove={handleRemoveImage}
                   onAddMore={handleAddMore}
                   onClearAll={handleClearAll}
+                  onReorderImages={handleReorderImages}
                 />
               </div>
             </MobileDrawer>
@@ -351,8 +414,14 @@ export default function App() {
 
                 <div className="border-t pt-4">
                   <PresetButtons
-                    currentSettings={borderSettings}
-                    onApply={setBorderSettings}
+                    currentBorder={borderSettings}
+                    currentResize={resizeSettings}
+                    currentOutput={outputSettings}
+                    onApply={(border, resize, output) => {
+                      setBorderSettings(border);
+                      if (resize) setResizeSettings(resize);
+                      if (output) setOutputSettings(output);
+                    }}
                   />
                 </div>
 
@@ -362,8 +431,12 @@ export default function App() {
                     results={results}
                     isProcessing={isProcessing}
                     progress={progress}
+                    currentIndex={currentIndex}
+                    totalCount={totalCount}
+                    currentImageName={currentImageName}
                     onProcess={handleProcess}
                     onCancel={handleCancel}
+                    onToast={addToast}
                   />
                 </div>
               </div>
@@ -371,6 +444,8 @@ export default function App() {
           </>
         )}
       </main>
+
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
 
       <footer className="hidden md:block py-2 px-4 border-t text-center text-xs text-gray-500 dark:text-gray-400 bg-surface-light dark:bg-surface-dark">
         Framr - Add borders to your images. All processing happens in your browser.
