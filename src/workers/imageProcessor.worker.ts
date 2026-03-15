@@ -9,6 +9,7 @@ import {
 } from '../utils/imageProcessing';
 import { applyBorderFill } from '../utils/gradientUtils';
 import { drawTextOverlay } from '../utils/textOverlay';
+import { loadFontInto, getFontUrl, isGenericFont } from '../utils/fonts';
 
 interface ProcessMessage {
   type: 'process';
@@ -90,7 +91,33 @@ async function processImage(message: ProcessMessage): Promise<void> {
     ctx.drawImage(imageBitmap, borderSizes.left, borderSizes.top, resizedWidth, resizedHeight);
 
     if (textOverlay) {
-      drawTextOverlay(ctx, canvasWidth, canvasHeight, borderSizes, borderSettings.color, textOverlay);
+      let effectiveFamily = textOverlay.fontFamily;
+      let effectiveWeight = textOverlay.fontWeight || 400;
+
+      if (!isGenericFont(effectiveFamily)) {
+        const url = getFontUrl(effectiveFamily, effectiveWeight);
+        if (url) {
+          const workerFonts = (self as unknown as { fonts: FontFaceSet }).fonts;
+          const loaded = await loadFontInto(workerFonts, effectiveFamily, url, effectiveWeight);
+          if (!loaded) {
+            console.warn(`Worker: font "${effectiveFamily}" failed to load, using fallback`);
+            effectiveFamily = 'sans-serif';
+            effectiveWeight = 400;
+          }
+        }
+      }
+
+      self.postMessage({
+        type: 'progress',
+        imageId,
+        progress: 55,
+      } as ProgressMessage);
+
+      drawTextOverlay(ctx, canvasWidth, canvasHeight, borderSizes, borderSettings.color, {
+        ...textOverlay,
+        fontFamily: effectiveFamily,
+        fontWeight: effectiveWeight,
+      });
     }
 
     imageBitmap.close();

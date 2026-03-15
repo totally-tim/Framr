@@ -49,6 +49,19 @@ export const PRESET_COLORS = [
   { name: 'White', value: '#FFFFFF' },
 ];
 
+export const TEXT_COLOR_PRESETS = [
+  { name: 'White', value: '#FFFFFF' },
+  { name: 'Black', value: '#000000' },
+  { name: 'Red', value: '#EF4444' },
+  { name: 'Orange', value: '#F97316' },
+  { name: 'Yellow', value: '#EAB308' },
+  { name: 'Green', value: '#22C55E' },
+  { name: 'Blue', value: '#3B82F6' },
+  { name: 'Purple', value: '#A855F7' },
+  { name: 'Pink', value: '#EC4899' },
+  { name: 'Gray', value: '#6B7280' },
+];
+
 export const CANVAS_BACKGROUND_COLORS = [
   { name: 'Black', value: '#000000' },
   { name: 'Dark Gray', value: '#333333' },
