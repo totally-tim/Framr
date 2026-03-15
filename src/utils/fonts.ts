@@ -331,68 +331,110 @@ export function getFontUrl(fontName: string, weight: number): string | null {
 }
 
 /**
- * Resolve a Google Fonts woff2 URL by fetching the CSS2 API.
- * Caches results so each family+weight is fetched only once.
+ * Build the Google Fonts CSS2 API URL for a given family and weight.
+ */
+function googleFontsCssUrl(family: string, weight: number): string {
+  return `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:wght@${weight}&display=swap`;
+}
+
+/**
+ * Main-thread font loading via <link> stylesheet injection.
+ * This is Google's recommended approach and handles all edge cases:
+ * variable fonts, unicode-range subsetting, format negotiation, caching.
+ */
+async function loadGoogleFontViaStylesheet(family: string, weight: number): Promise<boolean> {
+  const id = `gfont-${family.replace(/\s+/g, '-').toLowerCase()}-${weight}`;
+
+  if (!document.getElementById(id)) {
+    const link = document.createElement('link');
+    link.id = id;
+    link.rel = 'stylesheet';
+    link.href = googleFontsCssUrl(family, weight);
+    link.crossOrigin = 'anonymous';
+
+    const loaded = new Promise<boolean>((resolve) => {
+      link.onload = () => resolve(true);
+      link.onerror = () => resolve(false);
+      setTimeout(() => resolve(false), 8000);
+    });
+
+    document.head.appendChild(link);
+    if (!(await loaded)) return false;
+  }
+
+  // Wait for the font face to actually be ready for rendering
+  try {
+    await document.fonts.ready;
+    // Give browser a tick to register the font faces from the stylesheet
+    await new Promise((r) => setTimeout(r, 50));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Worker font loading: fetch the CSS2 API, parse out woff2 URL, load via FontFace.
+ * More fragile than <link> but works in worker context where DOM isn't available.
  */
 async function resolveGoogleFontUrl(family: string, weight: number): Promise<string | null> {
   const cacheKey = `${family}:${weight}`;
   const cached = googleFontUrlCache.get(cacheKey);
   if (cached) return cached;
 
-  try {
-    const apiUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:wght@${weight}&display=swap`;
-    const response = await fetch(apiUrl);
-    if (!response.ok) return null;
-    const css = await response.text();
-    // Extract woff2 URL from the @font-face CSS
-    const match = css.match(/url\(([^)]+\.woff2[^)]*)\)/);
-    if (match) {
-      const url = match[1];
-      googleFontUrlCache.set(cacheKey, url);
-      return url;
+  // Try specific weight first, then without weight (for single-weight fonts)
+  const urls = [
+    googleFontsCssUrl(family, weight),
+    `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}&display=swap`,
+  ];
+
+  for (const apiUrl of urls) {
+    try {
+      const response = await fetch(apiUrl);
+      if (!response.ok) continue;
+      const css = await response.text();
+
+      // Try multiple patterns — Google serves different CSS formats
+      // Pattern 1: url(https://...woff2) format('woff2')
+      // Pattern 2: url(https://...woff2)
+      const matches = css.match(/url\(([^)]+\.woff2[^)]*)\)/g);
+      if (matches && matches.length > 0) {
+        // Prefer the latin subset (usually the last @font-face block)
+        const lastMatch = matches[matches.length - 1];
+        const urlMatch = lastMatch.match(/url\(([^)]+)\)/);
+        if (urlMatch) {
+          const url = urlMatch[1];
+          googleFontUrlCache.set(cacheKey, url);
+          return url;
+        }
+      }
+    } catch {
+      continue;
     }
-  } catch {
-    // Network error — font will fall back to generic
   }
   return null;
 }
 
-export async function loadFontInto(
+async function loadFontIntoFontFaceSet(
   fonts: FontFaceSet,
   name: string,
   url: string,
   weight = 400,
 ): Promise<boolean> {
-  // Already loaded?
   try {
     if (fonts.check(`${weight} 16px "${name}"`)) return true;
-  } catch {
-    // fonts.check can throw if font string is invalid; continue to load
-  }
+  } catch { /* continue */ }
 
   try {
-    const face = new FontFace(name, `url(${url})`, {
-      weight: String(weight),
-    });
-
+    const face = new FontFace(name, `url(${url})`, { weight: String(weight) });
     fonts.add(face);
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-
-    try {
-      await Promise.race([
-        face.load(),
-        new Promise<never>((_, reject) => {
-          controller.signal.addEventListener('abort', () =>
-            reject(new Error('Font load timeout')),
-          );
-        }),
-      ]);
-      return true;
-    } finally {
-      clearTimeout(timeout);
-    }
+    await Promise.race([
+      face.load(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Font load timeout')), 8000),
+      ),
+    ]);
+    return true;
   } catch (err) {
     console.warn(`Failed to load font "${name}" (${weight}):`, err);
     return false;
@@ -400,8 +442,13 @@ export async function loadFontInto(
 }
 
 /**
- * High-level font loader. Resolves the correct URL (bundled or Google Fonts API)
- * and loads the font into the given FontFaceSet. Works in both main thread and workers.
+ * High-level font loader.
+ *
+ * - Generic fonts (sans-serif, serif, monospace): no-op, always available.
+ * - Bundled fonts (DSEG7): loaded via local URL + FontFace.
+ * - Google Fonts on main thread: loaded via <link> stylesheet injection
+ *   (Google's recommended approach — handles variable fonts, subsetting, caching).
+ * - Google Fonts in worker: loaded via CSS2 API fetch + FontFace.
  */
 export async function loadFont(
   fonts: FontFaceSet,
@@ -413,16 +460,23 @@ export async function loadFont(
   const meta = getFontMeta(fontName);
   if (!meta) return false;
 
-  // Bundled font — use static URL
+  // Bundled font — use static URL + FontFace
   if (meta.bundled) {
     const url = getFontUrl(fontName, weight);
-    if (url) return loadFontInto(fonts, meta.family, url, weight);
+    if (url) return loadFontIntoFontFaceSet(fonts, meta.family, url, weight);
     return false;
   }
 
-  // Google Font — resolve woff2 URL dynamically
+  // Google Font — use different strategy based on environment
+  const isMainThread = typeof document !== 'undefined';
+
+  if (isMainThread) {
+    return loadGoogleFontViaStylesheet(meta.family, weight);
+  }
+
+  // Worker context — fetch CSS API, parse URL, load FontFace
   const url = await resolveGoogleFontUrl(meta.family, weight);
-  if (url) return loadFontInto(fonts, meta.family, url, weight);
+  if (url) return loadFontIntoFontFaceSet(fonts, meta.family, url, weight);
   return false;
 }
 
