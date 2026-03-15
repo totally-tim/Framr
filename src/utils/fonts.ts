@@ -528,5 +528,36 @@ export const FILM_CAMERA_PRESET: Partial<TextOverlaySettings> = {
   position: 'bottom-right',
   fontSize: 0.7,
   useAutoColor: false,
-  textShadow: { enabled: true, color: '#000000', useAutoColor: true, blur: 2, offsetX: 0, offsetY: 0 },
+  textShadow: { enabled: false, color: '#000000', useAutoColor: true, blur: 2, offsetX: 0, offsetY: 0 },
+  textEffect: 'film-burn',
+  effectIntensity: 0.6,
 };
+
+/**
+ * Fetch font binary data as ArrayBuffer (for passing to worker via transferable).
+ * Resolves the woff2 URL first (from bundled path or Google CSS API),
+ * then fetches the binary. Returns null on any failure.
+ */
+export async function fetchFontData(fontName: string, weight = 400): Promise<ArrayBuffer | null> {
+  if (isGenericFont(fontName)) return null;
+
+  const meta = getFontMeta(fontName);
+  if (!meta) return null;
+
+  try {
+    let url: string | null = null;
+
+    if (meta.bundled) {
+      url = getFontUrl(fontName, weight);
+    } else {
+      url = await resolveGoogleFontUrl(meta.family, weight);
+    }
+
+    if (!url) return null;
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    return await response.arrayBuffer();
+  } catch {
+    return null;
+  }
+}

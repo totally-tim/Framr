@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { ImageFile, ProcessingConfig, ProcessingResult } from '../types';
 import { loadImage } from '../utils/imageUtils';
+import { fetchFontData, isGenericFont } from '../utils/fonts';
 
 interface ProcessingState {
   isProcessing: boolean;
@@ -69,6 +70,19 @@ export function useImageProcessor() {
 
       const results: ProcessingResult[] = [];
 
+      // Pre-fetch font data once for the entire batch (main thread, reliable)
+      let fontData: ArrayBuffer | null = null;
+      if (
+        config.textOverlay?.enabled &&
+        config.textOverlay.fontFamily &&
+        !isGenericFont(config.textOverlay.fontFamily)
+      ) {
+        fontData = await fetchFontData(
+          config.textOverlay.fontFamily,
+          config.textOverlay.fontWeight || 400,
+        );
+      }
+
       try {
         for (let i = 0; i < images.length; i++) {
           if (cancelledRef.current) {
@@ -113,6 +127,11 @@ export function useImageProcessor() {
 
               workerRef.current?.addEventListener('message', handler);
 
+              // Clone fontData for each image (transfer empties the buffer)
+              const fontDataCopy = fontData ? fontData.slice(0) : undefined;
+              const transferables: Transferable[] = [bitmap];
+              if (fontDataCopy) transferables.push(fontDataCopy);
+
               workerRef.current?.postMessage({
                 type: 'process',
                 imageBitmap: bitmap,
@@ -120,7 +139,8 @@ export function useImageProcessor() {
                 originalFormat: image.name,
                 filename: image.name,
                 imageId: image.id,
-              }, [bitmap]);
+                fontData: fontDataCopy,
+              }, transferables);
             });
 
             results.push(result);

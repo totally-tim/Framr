@@ -93,7 +93,56 @@ export function drawTextOverlay(
       : canvasHeight - fontSize / 2 - padding;
   }
 
-  // --- Text shadow ---
+  // --- Text effects (rendered as additional passes before the main text) ---
+  const effect = settings.textEffect ?? 'none';
+  const intensity = settings.effectIntensity ?? 0.5;
+
+  if (effect === 'glow') {
+    // Multi-pass glow: concentric halos of the text color
+    for (let i = 3; i >= 1; i--) {
+      ctx.save();
+      ctx.globalAlpha = settings.opacity * intensity * (0.25 / i);
+      ctx.shadowColor = color;
+      ctx.shadowBlur = fontSize * 0.35 * i * intensity;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+      ctx.fillText(settings.text, textX, textY);
+      ctx.restore();
+    }
+  } else if (effect === 'film-burn') {
+    // Imitate old film camera date burns: soft bleed + halo + edge imperfections
+
+    // Pass 1: Wide soft glow (the "burn" onto film emulsion)
+    ctx.save();
+    ctx.globalAlpha = settings.opacity * 0.2 * intensity;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = fontSize * 0.7 * intensity;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+    ctx.fillText(settings.text, textX, textY);
+    ctx.restore();
+
+    // Pass 2: Medium inner glow
+    ctx.save();
+    ctx.globalAlpha = settings.opacity * 0.35 * intensity;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = fontSize * 0.3 * intensity;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+    ctx.fillText(settings.text, textX, textY);
+    ctx.restore();
+
+    // Pass 3: Slight edge bleed (imperfection — directional sub-pixel offsets)
+    ctx.save();
+    ctx.globalAlpha = settings.opacity * 0.12 * intensity;
+    const bleed = Math.max(1, Math.round(scale * 0.6));
+    for (const [dx, dy] of [[-bleed, 0], [bleed, 0], [0, -bleed], [0, bleed]] as const) {
+      ctx.fillText(settings.text, textX + dx, textY + dy);
+    }
+    ctx.restore();
+  }
+
+  // --- Text shadow (manual, independent of effects) ---
   if (settings.textShadow?.enabled) {
     const shadow = settings.textShadow;
     ctx.shadowColor = shadow.useAutoColor
@@ -102,6 +151,11 @@ export function drawTextOverlay(
     ctx.shadowBlur = shadow.blur * scale;
     ctx.shadowOffsetX = shadow.offsetX * scale;
     ctx.shadowOffsetY = shadow.offsetY * scale;
+  }
+
+  // --- Main text (slightly aged opacity for film-burn) ---
+  if (effect === 'film-burn') {
+    ctx.globalAlpha = settings.opacity * (0.88 + 0.12 * (1 - intensity));
   }
 
   ctx.fillText(settings.text, textX, textY);

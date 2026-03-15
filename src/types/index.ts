@@ -75,6 +75,8 @@ export type TextPosition =
 
 export type DateStampFormat = 'japanese' | 'american' | 'european';
 
+export type TextEffect = 'none' | 'glow' | 'film-burn';
+
 export interface TextShadowSettings {
   enabled: boolean;
   color: string;
@@ -99,6 +101,8 @@ export interface TextOverlaySettings {
   opacity: number;
   dateStampFormat: DateStampFormat;
   textShadow: TextShadowSettings;
+  textEffect: TextEffect;
+  effectIntensity: number; // 0.0–1.0
 }
 
 export interface FontWeight {

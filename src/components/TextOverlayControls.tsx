@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import type { TextOverlaySettings, TextPosition, FontMeta, DateStampFormat } from '../types';
+import type { TextOverlaySettings, TextPosition, FontMeta, DateStampFormat, TextEffect } from '../types';
 import {
   CURATED_FONTS,
   ALL_FONTS,
@@ -599,7 +599,49 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
                 )}
               </div>
 
-              {/* H) Opacity slider */}
+              {/* H) Text Effect */}
+              <div className="space-y-2">
+                <label className="text-xs text-gray-500 dark:text-gray-400">Text Effect</label>
+                <div className="flex rounded-lg overflow-hidden border">
+                  {([
+                    { value: 'none' as TextEffect, label: 'None' },
+                    { value: 'glow' as TextEffect, label: 'Glow' },
+                    { value: 'film-burn' as TextEffect, label: 'Film Burn' },
+                  ]).map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => onChange({ ...textOverlay, textEffect: opt.value })}
+                      className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
+                        textOverlay.textEffect === opt.value
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+
+                {textOverlay.textEffect !== 'none' && (
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs text-gray-500 dark:text-gray-400">Intensity</label>
+                      <span className="text-xs text-gray-600 dark:text-gray-300">{Math.round(textOverlay.effectIntensity * 100)}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      value={textOverlay.effectIntensity}
+                      onChange={(e) => onChange({ ...textOverlay, effectIntensity: parseFloat(e.target.value) })}
+                      className="slider w-full"
+                      min={0.1}
+                      max={1.0}
+                      step={0.05}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* I) Opacity slider */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-xs text-gray-500 dark:text-gray-400">Opacity</label>

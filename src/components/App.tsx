@@ -53,6 +53,8 @@ const DEFAULT_TEXT_OVERLAY: TextOverlaySettings = {
     offsetX: 1,
     offsetY: 1,
   },
+  textEffect: 'none',
+  effectIntensity: 0.5,
 };
 
 export default function App() {

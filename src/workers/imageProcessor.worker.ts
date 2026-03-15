@@ -24,6 +24,7 @@ interface ProcessMessage {
   originalFormat: string;
   filename: string;
   imageId: string;
+  fontData?: ArrayBuffer;
 }
 
 interface ResultMessage {
@@ -96,7 +97,27 @@ async function processImage(message: ProcessMessage): Promise<void> {
 
       if (!isGenericFont(effectiveFamily)) {
         const workerFonts = (self as unknown as { fonts: FontFaceSet }).fonts;
-        const loaded = await loadFont(workerFonts, effectiveFamily, effectiveWeight);
+        let loaded = false;
+
+        // Prefer pre-fetched font data from main thread (most reliable)
+        if (message.fontData) {
+          try {
+            const face = new FontFace(effectiveFamily, message.fontData, {
+              weight: String(effectiveWeight),
+            });
+            workerFonts.add(face);
+            await face.load();
+            loaded = true;
+          } catch (err) {
+            console.warn(`Worker: font from ArrayBuffer failed:`, err);
+          }
+        }
+
+        // Fallback: try CSS API fetch (existing approach)
+        if (!loaded) {
+          loaded = await loadFont(workerFonts, effectiveFamily, effectiveWeight);
+        }
+
         if (!loaded) {
           console.warn(`Worker: font "${effectiveFamily}" failed to load, using fallback`);
           effectiveFamily = 'sans-serif';

@@ -54,6 +54,8 @@ function createSettings(overrides: Partial<TextOverlaySettings> = {}): TextOverl
       offsetX: 1,
       offsetY: 1,
     },
+    textEffect: 'none',
+    effectIntensity: 0.5,
     ...overrides,
   };
 }
