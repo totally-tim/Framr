@@ -25,12 +25,26 @@ export function drawTextOverlay(
 ): void {
   if (!settings.enabled || !settings.text.trim()) return;
 
-  // Base font size: 40% of the largest vertical border, minimum 12px (unscaled).
-  const vertBorder = Math.max(border.top, border.bottom);
-  const horizBorder = Math.max(border.left, border.right);
-  const refBorder = vertBorder > 0 ? vertBorder : horizBorder;
+  const pos = settings.position;
+  const isMiddleRow = pos.startsWith('middle');
+
+  // Determine the reference border for font sizing based on position row.
+  // For top/bottom rows, use that row's border. For middle, use the smaller canvas dimension.
+  let refBorder: number;
+  if (isMiddleRow) {
+    // On-image text: base size on ~5% of image area height
+    const imageHeight = canvasHeight - (border.top + border.bottom) * scale;
+    refBorder = Math.max(imageHeight * 0.12, 12);
+  } else if (pos.startsWith('top')) {
+    refBorder = border.top > 0 ? border.top : Math.max(border.bottom, border.left, border.right);
+  } else {
+    refBorder = border.bottom > 0 ? border.bottom : Math.max(border.top, border.left, border.right);
+  }
+
   const basePx = Math.max(12, Math.round(refBorder * 0.4));
-  const fontSize = Math.round(basePx * settings.fontSize * scale);
+  // Cap font size at 6% of canvas height to prevent overflow with huge borders
+  const maxFontSize = Math.round(canvasHeight * 0.06);
+  const fontSize = Math.min(Math.round(basePx * settings.fontSize * scale), maxFontSize);
   const padding = Math.max(Math.round(8 * scale), Math.round(fontSize * 0.3));
 
   const color = settings.useAutoColor ? getContrastColor(borderColor) : settings.color;
@@ -46,9 +60,6 @@ export function drawTextOverlay(
   ctx.fillStyle = color;
   ctx.textBaseline = 'middle';
 
-  const pos = settings.position;
-  const isMiddleRow = pos.startsWith('middle');
-
   // --- X position ---
   let textX: number;
   if (pos.endsWith('center')) {
@@ -56,16 +67,22 @@ export function drawTextOverlay(
     textX = canvasWidth / 2;
   } else if (pos.endsWith('left')) {
     ctx.textAlign = 'left';
-    textX = border.left * scale + padding;
+    // Use actual left border, fall back to padding if border is zero
+    const leftEdge = border.left > 0 ? border.left * scale : 0;
+    textX = leftEdge + padding;
   } else {
     ctx.textAlign = 'right';
-    textX = canvasWidth - border.right * scale - padding;
+    const rightEdge = border.right > 0 ? border.right * scale : 0;
+    textX = canvasWidth - rightEdge - padding;
   }
 
   // --- Y position ---
   let textY: number;
   if (isMiddleRow) {
-    textY = canvasHeight / 2;
+    // Center of the image area (between top and bottom borders)
+    const imageTop = border.top * scale;
+    const imageBottom = canvasHeight - border.bottom * scale;
+    textY = (imageTop + imageBottom) / 2;
   } else if (pos.startsWith('top')) {
     const topPx = border.top * scale;
     textY = topPx > fontSize ? topPx / 2 : fontSize / 2 + padding;

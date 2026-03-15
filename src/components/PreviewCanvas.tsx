@@ -5,7 +5,7 @@ import { calculateAspectRatioBorders } from '../utils/imageProcessing';
 import { applyBorderFill } from '../utils/gradientUtils';
 import { drawTextOverlay } from '../utils/textOverlay';
 import { useDebounce } from '../hooks/useDebounce';
-import { loadFontInto, getFontUrl, isGenericFont, getFontMeta } from '../utils/fonts';
+import { loadFont, isGenericFont } from '../utils/fonts';
 
 interface PreviewCanvasProps {
   image: ImageFile | null;
@@ -62,11 +62,7 @@ export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBac
   useEffect(() => {
     if (!textOverlay?.fontFamily || isGenericFont(textOverlay.fontFamily)) return;
     const weight = textOverlay.fontWeight || 400;
-    const meta = getFontMeta(textOverlay.fontFamily);
-    if (!meta) return;
-    const url = getFontUrl(textOverlay.fontFamily, weight);
-    if (!url) return;
-    loadFontInto(document.fonts, meta.family, url, weight).then(() => {
+    loadFont(document.fonts, textOverlay.fontFamily, weight).then(() => {
       setFontReady((c) => c + 1);
     });
   }, [textOverlay?.fontFamily, textOverlay?.fontWeight]);
