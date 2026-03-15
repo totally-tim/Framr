@@ -70,6 +70,7 @@ interface SocialPreset {
 const SOCIAL_PRESETS: SocialPreset[] = [
   { id: 'ig-square',    name: '1:1',  platform: 'Instagram',  targetAspectRatio: { width: 1, height: 1 },  description: 'Instagram square' },
   { id: 'ig-portrait',  name: '4:5',  platform: 'Instagram',  targetAspectRatio: { width: 4, height: 5 },  description: 'Instagram portrait' },
+  { id: 'ig-photo',     name: '3:4',  platform: 'Instagram',  targetAspectRatio: { width: 3, height: 4 },  description: 'Instagram photo portrait' },
   { id: 'pinterest',    name: '2:3',  platform: 'Pinterest',  targetAspectRatio: { width: 2, height: 3 },  description: 'Pinterest vertical pin' },
   { id: 'twitter',      name: '16:9', platform: 'Twitter/X',  targetAspectRatio: { width: 16, height: 9 }, description: 'Twitter/X landscape' },
   { id: 'tiktok',       name: '9:16', platform: 'TikTok',     targetAspectRatio: { width: 9, height: 16 }, description: 'TikTok vertical' },

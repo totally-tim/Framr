@@ -95,7 +95,12 @@ export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBac
 
     let scale: number;
     if (zoom === 'fit') {
-      scale = Math.min(containerWidth / fullWidth, containerHeight / fullHeight, 1);
+      if (fullHeight > fullWidth) {
+        // Portrait: fit to width for a larger preview, allow vertical scroll
+        scale = Math.min(containerWidth / fullWidth, 1);
+      } else {
+        scale = Math.min(containerWidth / fullWidth, containerHeight / fullHeight, 1);
+      }
     } else if (zoom === '100') {
       scale = 1;
     } else {
@@ -300,8 +305,12 @@ export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBac
     <div className="flex flex-col h-full">
       <div
         ref={containerRef}
-        className={`flex-1 flex items-center justify-center p-4 overflow-auto relative ${canvasBackground.mode === 'checkerboard' ? 'checkerboard' : ''}`}
-        style={canvasBackground.mode === 'solid' ? { backgroundColor: canvasBackground.color } : undefined}
+        className={`flex-1 flex p-4 overflow-auto relative ${canvasBackground.mode === 'checkerboard' ? 'checkerboard' : ''}`}
+        style={{
+          alignItems: 'safe center',
+          justifyContent: 'safe center',
+          ...(canvasBackground.mode === 'solid' && { backgroundColor: canvasBackground.color }),
+        }}
       >
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-black/50">
@@ -387,7 +396,7 @@ export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBac
         ) : (
           <canvas
             ref={resultCanvasRef}
-            className="max-w-full max-h-full shadow-lg"
+            className="max-w-full shadow-lg"
             style={{ imageRendering: zoom === '100' ? 'pixelated' : 'auto' }}
           />
         )}
