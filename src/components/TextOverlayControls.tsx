@@ -329,32 +329,31 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
                   </div>
                 </div>
 
-                {/* Weight buttons */}
-                {availableWeights.length > 1 && (
-                  <div className="space-y-1">
-                    <label className="text-xs text-gray-500 dark:text-gray-400">Weight</label>
-                    <div className="flex gap-1 flex-wrap">
-                      {availableWeights.map((w) => (
-                        <button
-                          key={w.weight}
-                          onClick={() => {
-                            if (!isGenericFont(textOverlay.fontFamily)) {
-                              loadFont(document.fonts, textOverlay.fontFamily, w.weight);
-                            }
-                            onChange({ ...textOverlay, fontWeight: w.weight });
-                          }}
-                          className={`px-2 py-1 text-xs rounded border transition-colors ${
-                            textOverlay.fontWeight === w.weight
-                              ? 'bg-blue-500 text-white border-blue-500'
-                              : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
-                          }`}
-                        >
-                          {w.label}
-                        </button>
-                      ))}
-                    </div>
+                {/* Weight buttons — always rendered to prevent layout shift */}
+                <div className="space-y-1">
+                  <label className="text-xs text-gray-500 dark:text-gray-400">Weight</label>
+                  <div className="flex gap-1 flex-wrap">
+                    {availableWeights.map((w) => (
+                      <button
+                        key={w.weight}
+                        disabled={availableWeights.length === 1}
+                        onClick={() => {
+                          if (!isGenericFont(textOverlay.fontFamily)) {
+                            loadFont(document.fonts, textOverlay.fontFamily, w.weight);
+                          }
+                          onChange({ ...textOverlay, fontWeight: w.weight });
+                        }}
+                        className={`px-2 py-1 text-xs rounded border transition-colors ${
+                          textOverlay.fontWeight === w.weight
+                            ? 'bg-blue-500 text-white border-blue-500'
+                            : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
+                        } disabled:opacity-60 disabled:cursor-default`}
+                      >
+                        {w.label}
+                      </button>
+                    ))}
                   </div>
-                )}
+                </div>
               </div>
 
               {/* D) Position Grid */}

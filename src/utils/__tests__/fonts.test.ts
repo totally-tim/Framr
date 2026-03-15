@@ -112,9 +112,9 @@ describe('getRecentFonts / addRecentFont', () => {
   });
 });
 
-describe('loadFontInto', () => {
+describe('loadFont', () => {
   it('is exported and callable', async () => {
-    const { loadFontInto } = await import('../fonts');
-    expect(typeof loadFontInto).toBe('function');
+    const { loadFont } = await import('../fonts');
+    expect(typeof loadFont).toBe('function');
   });
 });
