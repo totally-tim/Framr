@@ -14,17 +14,9 @@ const mockLocalStorage = {
 Object.defineProperty(globalThis, 'localStorage', { value: mockLocalStorage, writable: true });
 
 describe('getFontUrl', () => {
-  it('returns URL for exact weight match', () => {
-    const url = getFontUrl('Bungee', 400);
-    expect(url).toBeTruthy();
-    expect(url).toContain('bungee');
-  });
-
-  it('returns closest weight URL when exact weight is unavailable', () => {
-    // Bungee only has 400, requesting 700 should still return the 400 URL
-    const url = getFontUrl('Bungee', 700);
-    expect(url).toBeTruthy();
-    expect(url).toContain('bungee');
+  it('returns null for Google Fonts (URLs resolved dynamically)', () => {
+    // Google Font URLs are now empty — resolved at runtime via CSS2 API
+    expect(getFontUrl('Bungee', 400)).toBeNull();
   });
 
   it('returns null for unknown font', () => {

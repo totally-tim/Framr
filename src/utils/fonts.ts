@@ -1,7 +1,5 @@
 import type { FontMeta, TextOverlaySettings } from '../types';
 
-const GOOGLE_FONTS_CDN = 'https://fonts.gstatic.com/s';
-
 export const CURATED_FONTS: FontMeta[] = [
   // --- Display (featured) ---
   {
@@ -23,9 +21,9 @@ export const CURATED_FONTS: FontMeta[] = [
     featured: true,
     tags: ['futuristic', 'geometric'],
     weights: [
-      { weight: 400, label: 'Regular', url: `${GOOGLE_FONTS_CDN}/orbitron/v31/yMJRMIlzdpvBhQQL_Qq7dy0.woff2` },
-      { weight: 700, label: 'Bold', url: `${GOOGLE_FONTS_CDN}/orbitron/v31/yMJRMIlzdpvBhQQL_Qq7dy0.woff2` },
-      { weight: 900, label: 'Black', url: `${GOOGLE_FONTS_CDN}/orbitron/v31/yMJRMIlzdpvBhQQL_Qq7dy0.woff2` },
+      { weight: 400, label: 'Regular', url: '' },
+      { weight: 700, label: 'Bold', url: '' },
+      { weight: 900, label: 'Black', url: '' },
     ],
   },
   {
@@ -34,36 +32,28 @@ export const CURATED_FONTS: FontMeta[] = [
     category: 'display',
     featured: true,
     tags: ['bold', 'blocky'],
-    weights: [
-      { weight: 400, label: 'Regular', url: `${GOOGLE_FONTS_CDN}/bungee/v14/N0bU2SZBIuF2PU_0AnA.woff2` },
-    ],
+    weights: [{ weight: 400, label: 'Regular', url: '' }],
   },
   {
     name: 'Black Ops One',
     family: 'Black Ops One',
     category: 'display',
     tags: ['military', 'stencil'],
-    weights: [
-      { weight: 400, label: 'Regular', url: `${GOOGLE_FONTS_CDN}/blackopsone/v20/qWcsB6-ypo7xBdr6Xshe96H3aDvS.woff2` },
-    ],
+    weights: [{ weight: 400, label: 'Regular', url: '' }],
   },
   {
     name: 'Righteous',
     family: 'Righteous',
     category: 'display',
     tags: ['retro', 'rounded'],
-    weights: [
-      { weight: 400, label: 'Regular', url: `${GOOGLE_FONTS_CDN}/righteous/v17/1cXxaUPXBpj2rGoU7C9WiHGF.woff2` },
-    ],
+    weights: [{ weight: 400, label: 'Regular', url: '' }],
   },
   {
     name: 'Russo One',
     family: 'Russo One',
     category: 'display',
     tags: ['industrial', 'bold'],
-    weights: [
-      { weight: 400, label: 'Regular', url: `${GOOGLE_FONTS_CDN}/russoone/v16/Z9XUDmZRWg6M1LvRYsHOz8mJ.woff2` },
-    ],
+    weights: [{ weight: 400, label: 'Regular', url: '' }],
   },
   {
     name: 'Chakra Petch',
@@ -71,9 +61,9 @@ export const CURATED_FONTS: FontMeta[] = [
     category: 'display',
     tags: ['tech', 'angular'],
     weights: [
-      { weight: 300, label: 'Light', url: `${GOOGLE_FONTS_CDN}/chakrapetch/v11/cIflMapbsEk7TDLdtEz1BwkWn6BPig.woff2` },
-      { weight: 400, label: 'Regular', url: `${GOOGLE_FONTS_CDN}/chakrapetch/v11/cIf6MapbsEk7TDLdtEz1BwkmmKBh.woff2` },
-      { weight: 700, label: 'Bold', url: `${GOOGLE_FONTS_CDN}/chakrapetch/v11/cIflMapbsEk7TDLdtEz1BwkWi6dPig.woff2` },
+      { weight: 300, label: 'Light', url: '' },
+      { weight: 400, label: 'Regular', url: '' },
+      { weight: 700, label: 'Bold', url: '' },
     ],
   },
 
@@ -83,9 +73,9 @@ export const CURATED_FONTS: FontMeta[] = [
     family: 'Inter',
     category: 'sans-serif',
     weights: [
-      { weight: 300, label: 'Light', url: `${GOOGLE_FONTS_CDN}/inter/v18/UcCo3FwrK3iLTcviYwY.woff2` },
-      { weight: 400, label: 'Regular', url: `${GOOGLE_FONTS_CDN}/inter/v18/UcCo3FwrK3iLTcviYwY.woff2` },
-      { weight: 700, label: 'Bold', url: `${GOOGLE_FONTS_CDN}/inter/v18/UcCo3FwrK3iLTcviYwY.woff2` },
+      { weight: 300, label: 'Light', url: '' },
+      { weight: 400, label: 'Regular', url: '' },
+      { weight: 700, label: 'Bold', url: '' },
     ],
   },
   {
@@ -93,9 +83,9 @@ export const CURATED_FONTS: FontMeta[] = [
     family: 'Roboto',
     category: 'sans-serif',
     weights: [
-      { weight: 300, label: 'Light', url: `${GOOGLE_FONTS_CDN}/roboto/v47/KFOMCnqEu92Fr1ME7kSn.woff2` },
-      { weight: 400, label: 'Regular', url: `${GOOGLE_FONTS_CDN}/roboto/v47/KFOMCnqEu92Fr1ME7kSn.woff2` },
-      { weight: 700, label: 'Bold', url: `${GOOGLE_FONTS_CDN}/roboto/v47/KFOMCnqEu92Fr1ME7kSn.woff2` },
+      { weight: 300, label: 'Light', url: '' },
+      { weight: 400, label: 'Regular', url: '' },
+      { weight: 700, label: 'Bold', url: '' },
     ],
   },
   {
@@ -103,9 +93,9 @@ export const CURATED_FONTS: FontMeta[] = [
     family: 'Open Sans',
     category: 'sans-serif',
     weights: [
-      { weight: 300, label: 'Light', url: `${GOOGLE_FONTS_CDN}/opensans/v40/memSYaGs126MiZpBA-UvWbX2vVnXBbObj2OVZyOOSr4dVJWUgsjZ0B4g.woff2` },
-      { weight: 400, label: 'Regular', url: `${GOOGLE_FONTS_CDN}/opensans/v40/memSYaGs126MiZpBA-UvWbX2vVnXBbObj2OVZyOOSr4dVJWUgsjZ0B4g.woff2` },
-      { weight: 700, label: 'Bold', url: `${GOOGLE_FONTS_CDN}/opensans/v40/memSYaGs126MiZpBA-UvWbX2vVnXBbObj2OVZyOOSr4dVJWUgsjZ0B4g.woff2` },
+      { weight: 300, label: 'Light', url: '' },
+      { weight: 400, label: 'Regular', url: '' },
+      { weight: 700, label: 'Bold', url: '' },
     ],
   },
   {
@@ -113,9 +103,9 @@ export const CURATED_FONTS: FontMeta[] = [
     family: 'Lato',
     category: 'sans-serif',
     weights: [
-      { weight: 300, label: 'Light', url: `${GOOGLE_FONTS_CDN}/lato/v24/S6u9w4BMUTPHh7USSwiPGQ.woff2` },
-      { weight: 400, label: 'Regular', url: `${GOOGLE_FONTS_CDN}/lato/v24/S6uyw4BMUTPHjx4wXg.woff2` },
-      { weight: 700, label: 'Bold', url: `${GOOGLE_FONTS_CDN}/lato/v24/S6u9w4BMUTPHh6UVSwiPGQ.woff2` },
+      { weight: 300, label: 'Light', url: '' },
+      { weight: 400, label: 'Regular', url: '' },
+      { weight: 700, label: 'Bold', url: '' },
     ],
   },
   {
@@ -123,9 +113,9 @@ export const CURATED_FONTS: FontMeta[] = [
     family: 'Montserrat',
     category: 'sans-serif',
     weights: [
-      { weight: 300, label: 'Light', url: `${GOOGLE_FONTS_CDN}/montserrat/v29/JTUHjIg1_i6t8kCHKm4532VJOt5-QNFgpCtr6Ew-.woff2` },
-      { weight: 400, label: 'Regular', url: `${GOOGLE_FONTS_CDN}/montserrat/v29/JTUHjIg1_i6t8kCHKm4532VJOt5-QNFgpCtr6Ew-.woff2` },
-      { weight: 700, label: 'Bold', url: `${GOOGLE_FONTS_CDN}/montserrat/v29/JTUHjIg1_i6t8kCHKm4532VJOt5-QNFgpCtr6Ew-.woff2` },
+      { weight: 300, label: 'Light', url: '' },
+      { weight: 400, label: 'Regular', url: '' },
+      { weight: 700, label: 'Bold', url: '' },
     ],
   },
   {
@@ -133,9 +123,9 @@ export const CURATED_FONTS: FontMeta[] = [
     family: 'Poppins',
     category: 'sans-serif',
     weights: [
-      { weight: 300, label: 'Light', url: `${GOOGLE_FONTS_CDN}/poppins/v22/pxiByp8kv8JHgFVrLDz8Z1xlEA.woff2` },
-      { weight: 400, label: 'Regular', url: `${GOOGLE_FONTS_CDN}/poppins/v22/pxiEyp8kv8JHgFVrJJfecg.woff2` },
-      { weight: 700, label: 'Bold', url: `${GOOGLE_FONTS_CDN}/poppins/v22/pxiByp8kv8JHgFVrLCz7Z1xlEA.woff2` },
+      { weight: 300, label: 'Light', url: '' },
+      { weight: 400, label: 'Regular', url: '' },
+      { weight: 700, label: 'Bold', url: '' },
     ],
   },
 
@@ -145,9 +135,9 @@ export const CURATED_FONTS: FontMeta[] = [
     family: 'Playfair Display',
     category: 'serif',
     weights: [
-      { weight: 400, label: 'Regular', url: `${GOOGLE_FONTS_CDN}/playfairdisplay/v37/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKdFvXDXbtM.woff2` },
-      { weight: 700, label: 'Bold', url: `${GOOGLE_FONTS_CDN}/playfairdisplay/v37/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKdFvXDXbtM.woff2` },
-      { weight: 900, label: 'Black', url: `${GOOGLE_FONTS_CDN}/playfairdisplay/v37/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKdFvXDXbtM.woff2` },
+      { weight: 400, label: 'Regular', url: '' },
+      { weight: 700, label: 'Bold', url: '' },
+      { weight: 900, label: 'Black', url: '' },
     ],
   },
   {
@@ -155,9 +145,9 @@ export const CURATED_FONTS: FontMeta[] = [
     family: 'Merriweather',
     category: 'serif',
     weights: [
-      { weight: 300, label: 'Light', url: `${GOOGLE_FONTS_CDN}/merriweather/v30/u-4n0qyriQwlOrhSvowK_l521wRpX837pvjxPA.woff2` },
-      { weight: 400, label: 'Regular', url: `${GOOGLE_FONTS_CDN}/merriweather/v30/u-4n0qyriQwlOrhSvowK_l521wRpX837pvjxPA.woff2` },
-      { weight: 700, label: 'Bold', url: `${GOOGLE_FONTS_CDN}/merriweather/v30/u-4n0qyriQwlOrhSvowK_l521wRpX837pvjxPA.woff2` },
+      { weight: 300, label: 'Light', url: '' },
+      { weight: 400, label: 'Regular', url: '' },
+      { weight: 700, label: 'Bold', url: '' },
     ],
   },
   {
@@ -165,8 +155,8 @@ export const CURATED_FONTS: FontMeta[] = [
     family: 'Lora',
     category: 'serif',
     weights: [
-      { weight: 400, label: 'Regular', url: `${GOOGLE_FONTS_CDN}/lora/v35/0QI6MX1D_JOuGQbT0gvTJPa787weuyJGmKxemMeZ.woff2` },
-      { weight: 700, label: 'Bold', url: `${GOOGLE_FONTS_CDN}/lora/v35/0QI6MX1D_JOuGQbT0gvTJPa787weuyJGmKxemMeZ.woff2` },
+      { weight: 400, label: 'Regular', url: '' },
+      { weight: 700, label: 'Bold', url: '' },
     ],
   },
   {
@@ -174,8 +164,8 @@ export const CURATED_FONTS: FontMeta[] = [
     family: 'Crimson Text',
     category: 'serif',
     weights: [
-      { weight: 400, label: 'Regular', url: `${GOOGLE_FONTS_CDN}/crimsontext/v19/wlp2gwHKFkZgtmSR3NB0oRJfbwhT.woff2` },
-      { weight: 700, label: 'Bold', url: `${GOOGLE_FONTS_CDN}/crimsontext/v19/wlppgwHKFkZgtmSR3NB0oRJXsCx2C9lR.woff2` },
+      { weight: 400, label: 'Regular', url: '' },
+      { weight: 700, label: 'Bold', url: '' },
     ],
   },
 
@@ -185,9 +175,9 @@ export const CURATED_FONTS: FontMeta[] = [
     family: 'JetBrains Mono',
     category: 'monospace',
     weights: [
-      { weight: 300, label: 'Light', url: `${GOOGLE_FONTS_CDN}/jetbrainsmono/v18/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKxjPVmUsaaDhw.woff2` },
-      { weight: 400, label: 'Regular', url: `${GOOGLE_FONTS_CDN}/jetbrainsmono/v18/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKxjPVmUsaaDhw.woff2` },
-      { weight: 700, label: 'Bold', url: `${GOOGLE_FONTS_CDN}/jetbrainsmono/v18/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKxjPVmUsaaDhw.woff2` },
+      { weight: 300, label: 'Light', url: '' },
+      { weight: 400, label: 'Regular', url: '' },
+      { weight: 700, label: 'Bold', url: '' },
     ],
   },
   {
@@ -195,9 +185,9 @@ export const CURATED_FONTS: FontMeta[] = [
     family: 'Fira Code',
     category: 'monospace',
     weights: [
-      { weight: 300, label: 'Light', url: `${GOOGLE_FONTS_CDN}/firacode/v22/uU9eCBsR6Z2vfE9aq3bL0fxyUs4tcw4W_D1sJVD7MOzlojwUKQ.woff2` },
-      { weight: 400, label: 'Regular', url: `${GOOGLE_FONTS_CDN}/firacode/v22/uU9eCBsR6Z2vfE9aq3bL0fxyUs4tcw4W_D1sJVD7MOzlojwUKQ.woff2` },
-      { weight: 700, label: 'Bold', url: `${GOOGLE_FONTS_CDN}/firacode/v22/uU9eCBsR6Z2vfE9aq3bL0fxyUs4tcw4W_D1sJVD7MOzlojwUKQ.woff2` },
+      { weight: 300, label: 'Light', url: '' },
+      { weight: 400, label: 'Regular', url: '' },
+      { weight: 700, label: 'Bold', url: '' },
     ],
   },
   {
@@ -205,9 +195,9 @@ export const CURATED_FONTS: FontMeta[] = [
     family: 'Source Code Pro',
     category: 'monospace',
     weights: [
-      { weight: 300, label: 'Light', url: `${GOOGLE_FONTS_CDN}/sourcecodepro/v23/HI_diYsKILxRpg3hIP6sJ7fM7PqPMcMnZFqUwX28DMyQtMdrTlA.woff2` },
-      { weight: 400, label: 'Regular', url: `${GOOGLE_FONTS_CDN}/sourcecodepro/v23/HI_diYsKILxRpg3hIP6sJ7fM7PqPMcMnZFqUwX28DMyQtMdrTlA.woff2` },
-      { weight: 700, label: 'Bold', url: `${GOOGLE_FONTS_CDN}/sourcecodepro/v23/HI_diYsKILxRpg3hIP6sJ7fM7PqPMcMnZFqUwX28DMyQtMdrTlA.woff2` },
+      { weight: 300, label: 'Light', url: '' },
+      { weight: 400, label: 'Regular', url: '' },
+      { weight: 700, label: 'Bold', url: '' },
     ],
   },
   {
@@ -215,9 +205,9 @@ export const CURATED_FONTS: FontMeta[] = [
     family: 'IBM Plex Mono',
     category: 'monospace',
     weights: [
-      { weight: 300, label: 'Light', url: `${GOOGLE_FONTS_CDN}/ibmplexmono/v19/-F6pfjptAgt5VM-kVkqdyU8n3kwq0n1hj-sNFQ.woff2` },
-      { weight: 400, label: 'Regular', url: `${GOOGLE_FONTS_CDN}/ibmplexmono/v19/-F63fjptAgt5VM-kVkqdyU8n5igg1l9kne.woff2` },
-      { weight: 700, label: 'Bold', url: `${GOOGLE_FONTS_CDN}/ibmplexmono/v19/-F6pfjptAgt5VM-kVkqdyU8n3oQu0n1hj-sNFQ.woff2` },
+      { weight: 300, label: 'Light', url: '' },
+      { weight: 400, label: 'Regular', url: '' },
+      { weight: 700, label: 'Bold', url: '' },
     ],
   },
   {
@@ -225,18 +215,14 @@ export const CURATED_FONTS: FontMeta[] = [
     family: 'Share Tech Mono',
     category: 'monospace',
     tags: ['tech', 'digital'],
-    weights: [
-      { weight: 400, label: 'Regular', url: `${GOOGLE_FONTS_CDN}/sharetechmono/v15/J7aHnp1uDWRBEqV98dVQztYldFcLowEF.woff2` },
-    ],
+    weights: [{ weight: 400, label: 'Regular', url: '' }],
   },
   {
     name: 'VT323',
     family: 'VT323',
     category: 'monospace',
     tags: ['pixel', 'retro', 'terminal'],
-    weights: [
-      { weight: 400, label: 'Regular', url: `${GOOGLE_FONTS_CDN}/vt323/v17/pxiKyp0ihIEF2isRFJXGdg.woff2` },
-    ],
+    weights: [{ weight: 400, label: 'Regular', url: '' }],
   },
 
   // --- Handwriting ---
@@ -245,42 +231,36 @@ export const CURATED_FONTS: FontMeta[] = [
     family: 'Dancing Script',
     category: 'handwriting',
     weights: [
-      { weight: 400, label: 'Regular', url: `${GOOGLE_FONTS_CDN}/dancingscript/v25/If2cXTr6YS-zF4S-kcSWSVi_sxjsniCgR7ot4g.woff2` },
-      { weight: 700, label: 'Bold', url: `${GOOGLE_FONTS_CDN}/dancingscript/v25/If2cXTr6YS-zF4S-kcSWSVi_sxjsniCgR7ot4g.woff2` },
+      { weight: 400, label: 'Regular', url: '' },
+      { weight: 700, label: 'Bold', url: '' },
     ],
   },
   {
     name: 'Pacifico',
     family: 'Pacifico',
     category: 'handwriting',
-    weights: [
-      { weight: 400, label: 'Regular', url: `${GOOGLE_FONTS_CDN}/pacifico/v22/FwZY7-Qmy14u9lezJ-6H6Mk.woff2` },
-    ],
+    weights: [{ weight: 400, label: 'Regular', url: '' }],
   },
   {
     name: 'Caveat',
     family: 'Caveat',
     category: 'handwriting',
     weights: [
-      { weight: 400, label: 'Regular', url: `${GOOGLE_FONTS_CDN}/caveat/v18/WnznHAc5bAfYB2QRah7pcpNvOx-pjfJ9eIGpYCxF.woff2` },
-      { weight: 700, label: 'Bold', url: `${GOOGLE_FONTS_CDN}/caveat/v18/WnznHAc5bAfYB2QRah7pcpNvOx-pjfJ9eIGpYCxF.woff2` },
+      { weight: 400, label: 'Regular', url: '' },
+      { weight: 700, label: 'Bold', url: '' },
     ],
   },
   {
     name: 'Satisfy',
     family: 'Satisfy',
     category: 'handwriting',
-    weights: [
-      { weight: 400, label: 'Regular', url: `${GOOGLE_FONTS_CDN}/satisfy/v21/rP2Hp2yn6lkG50LoOZSCHBeH.woff2` },
-    ],
+    weights: [{ weight: 400, label: 'Regular', url: '' }],
   },
   {
     name: 'Great Vibes',
     family: 'Great Vibes',
     category: 'handwriting',
-    weights: [
-      { weight: 400, label: 'Regular', url: `${GOOGLE_FONTS_CDN}/greatvibes/v19/RWmMoKWR9v4ksMfaWd_JN9XFiaQ.woff2` },
-    ],
+    weights: [{ weight: 400, label: 'Regular', url: '' }],
   },
 ];
 
@@ -323,6 +303,9 @@ const GENERIC_FAMILY_NAMES = new Set(['sans-serif', 'serif', 'monospace']);
 const RECENT_FONTS_KEY = 'framr-recent-fonts';
 const MAX_RECENT = 5;
 
+// Cache for resolved Google Fonts woff2 URLs
+const googleFontUrlCache = new Map<string, string>();
+
 export function isGenericFont(family: string): boolean {
   return GENERIC_FAMILY_NAMES.has(family);
 }
@@ -331,6 +314,9 @@ export function getFontMeta(fontName: string): FontMeta | undefined {
   return ALL_FONTS.find((f) => f.name === fontName || f.family === fontName);
 }
 
+/**
+ * Get a static/bundled font URL (sync). Returns null for Google Fonts — use loadFont() instead.
+ */
 export function getFontUrl(fontName: string, weight: number): string | null {
   const meta = getFontMeta(fontName);
   if (!meta) return null;
@@ -338,11 +324,37 @@ export function getFontUrl(fontName: string, weight: number): string | null {
   const exact = meta.weights.find((w) => w.weight === weight);
   if (exact?.url) return exact.url;
 
-  // Fall back to closest available weight
   const sorted = [...meta.weights].sort(
     (a, b) => Math.abs(a.weight - weight) - Math.abs(b.weight - weight),
   );
   return sorted[0]?.url || null;
+}
+
+/**
+ * Resolve a Google Fonts woff2 URL by fetching the CSS2 API.
+ * Caches results so each family+weight is fetched only once.
+ */
+async function resolveGoogleFontUrl(family: string, weight: number): Promise<string | null> {
+  const cacheKey = `${family}:${weight}`;
+  const cached = googleFontUrlCache.get(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const apiUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:wght@${weight}&display=swap`;
+    const response = await fetch(apiUrl);
+    if (!response.ok) return null;
+    const css = await response.text();
+    // Extract woff2 URL from the @font-face CSS
+    const match = css.match(/url\(([^)]+\.woff2[^)]*)\)/);
+    if (match) {
+      const url = match[1];
+      googleFontUrlCache.set(cacheKey, url);
+      return url;
+    }
+  } catch {
+    // Network error — font will fall back to generic
+  }
+  return null;
 }
 
 export async function loadFontInto(
@@ -385,6 +397,33 @@ export async function loadFontInto(
     console.warn(`Failed to load font "${name}" (${weight}):`, err);
     return false;
   }
+}
+
+/**
+ * High-level font loader. Resolves the correct URL (bundled or Google Fonts API)
+ * and loads the font into the given FontFaceSet. Works in both main thread and workers.
+ */
+export async function loadFont(
+  fonts: FontFaceSet,
+  fontName: string,
+  weight = 400,
+): Promise<boolean> {
+  if (isGenericFont(fontName)) return true;
+
+  const meta = getFontMeta(fontName);
+  if (!meta) return false;
+
+  // Bundled font — use static URL
+  if (meta.bundled) {
+    const url = getFontUrl(fontName, weight);
+    if (url) return loadFontInto(fonts, meta.family, url, weight);
+    return false;
+  }
+
+  // Google Font — resolve woff2 URL dynamically
+  const url = await resolveGoogleFontUrl(meta.family, weight);
+  if (url) return loadFontInto(fonts, meta.family, url, weight);
+  return false;
 }
 
 export function isFontLoaded(name: string, weight = 400): boolean {

@@ -6,8 +6,7 @@ import {
   FONT_CATEGORIES,
   FILM_CAMERA_PRESET,
   getFontMeta,
-  getFontUrl,
-  loadFontInto,
+  loadFont,
   getRecentFonts,
   addRecentFont,
   isGenericFont,
@@ -77,13 +76,9 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
 
           const meta = getFontMeta(fontName);
           if (!meta || isGenericFont(meta.family)) continue;
-          const url = getFontUrl(fontName, 400);
-          if (url) {
-            loadFontInto(document.fonts, meta.family, url, 400).then(() => {
-              // Force re-render of the element to show the loaded font
-              el.style.fontFamily = `"${meta.family}", sans-serif`;
-            });
-          }
+          loadFont(document.fonts, fontName, 400).then(() => {
+            el.style.fontFamily = `"${meta.family}", sans-serif`;
+          });
         }
       },
       { root: fontListRef.current, rootMargin: '100px' },
@@ -106,10 +101,7 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
     const newWeight = hasWeight ? currentWeight : font.weights[0]?.weight ?? 400;
 
     if (!isGenericFont(font.family)) {
-      const url = getFontUrl(font.name, newWeight);
-      if (url) {
-        loadFontInto(document.fonts, font.family, url, newWeight);
-      }
+      loadFont(document.fonts, font.name, newWeight);
     }
 
     onChange({ ...textOverlay, fontFamily: font.name, fontWeight: newWeight });
@@ -347,8 +339,7 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
                           key={w.weight}
                           onClick={() => {
                             if (!isGenericFont(textOverlay.fontFamily)) {
-                              const url = getFontUrl(textOverlay.fontFamily, w.weight);
-                              if (url) loadFontInto(document.fonts, selectedMeta!.family, url, w.weight);
+                              loadFont(document.fonts, textOverlay.fontFamily, w.weight);
                             }
                             onChange({ ...textOverlay, fontWeight: w.weight });
                           }}
@@ -367,14 +358,14 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
               </div>
 
               {/* D) Position Grid */}
-              <div className="space-y-1">
+              <div className="space-y-2">
                 <label className="text-xs text-gray-500 dark:text-gray-400">Position</label>
-                <div className="inline-grid grid-cols-3 gap-1">
+                <div className="grid grid-cols-3 gap-1 w-fit">
                   {POSITION_GRID.flat().map((cell) => (
                     <button
                       key={cell.value}
                       onClick={() => onChange({ ...textOverlay, position: cell.value })}
-                      className={`w-9 h-7 text-[10px] font-medium rounded transition-colors ${
+                      className={`w-10 h-8 text-[10px] font-medium rounded transition-colors ${
                         textOverlay.position === cell.value
                           ? 'bg-blue-500 text-white'
                           : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -387,7 +378,7 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
               </div>
 
               {/* E) Font Size slider */}
-              <div className="space-y-1">
+              <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-xs text-gray-500 dark:text-gray-400">Size</label>
                   <span className="text-xs text-gray-600 dark:text-gray-300">{textOverlay.fontSize.toFixed(1)}x</span>
@@ -610,7 +601,7 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
               </div>
 
               {/* H) Opacity slider */}
-              <div className="space-y-1">
+              <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-xs text-gray-500 dark:text-gray-400">Opacity</label>
                   <span className="text-xs text-gray-600 dark:text-gray-300">{Math.round(textOverlay.opacity * 100)}%</span>
