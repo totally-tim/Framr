@@ -9,7 +9,7 @@ import {
 } from '../utils/imageProcessing';
 import { applyBorderFill } from '../utils/gradientUtils';
 import { drawTextOverlay } from '../utils/textOverlay';
-import { loadFontInto, getFontUrl, isGenericFont } from '../utils/fonts';
+import { loadFont, isGenericFont } from '../utils/fonts';
 
 interface ProcessMessage {
   type: 'process';
@@ -95,15 +95,12 @@ async function processImage(message: ProcessMessage): Promise<void> {
       let effectiveWeight = textOverlay.fontWeight || 400;
 
       if (!isGenericFont(effectiveFamily)) {
-        const url = getFontUrl(effectiveFamily, effectiveWeight);
-        if (url) {
-          const workerFonts = (self as unknown as { fonts: FontFaceSet }).fonts;
-          const loaded = await loadFontInto(workerFonts, effectiveFamily, url, effectiveWeight);
-          if (!loaded) {
-            console.warn(`Worker: font "${effectiveFamily}" failed to load, using fallback`);
-            effectiveFamily = 'sans-serif';
-            effectiveWeight = 400;
-          }
+        const workerFonts = (self as unknown as { fonts: FontFaceSet }).fonts;
+        const loaded = await loadFont(workerFonts, effectiveFamily, effectiveWeight);
+        if (!loaded) {
+          console.warn(`Worker: font "${effectiveFamily}" failed to load, using fallback`);
+          effectiveFamily = 'sans-serif';
+          effectiveWeight = 400;
         }
       }
 
