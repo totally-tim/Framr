@@ -2,6 +2,7 @@ import { useState, useCallback, useRef } from 'react';
 import type { AspectRatio, ImageFile, BorderSettings, ResizeSettings, OutputSettings, ProcessingResult, CanvasBackground, Toast, ToastVariant, TextOverlaySettings } from '../types';
 import { createImageFile, checkMemoryWarning, cleanupImageResources } from '../utils/imageUtils';
 import { DEFAULT_BORDER_SETTINGS } from '../utils/constants';
+import { extractExifDate } from '../utils/exif';
 import { useTheme } from '../hooks/useTheme';
 import { useImageProcessor } from '../hooks/useImageProcessor';
 import { DropZone } from './DropZone';
@@ -39,9 +40,19 @@ const DEFAULT_TEXT_OVERLAY: TextOverlaySettings = {
   position: 'bottom-center',
   fontSize: 1.0,
   fontFamily: 'sans-serif',
+  fontWeight: 400,
   color: '#000000',
   useAutoColor: true,
   opacity: 1.0,
+  dateStampFormat: 'japanese',
+  textShadow: {
+    enabled: false,
+    color: '#000000',
+    useAutoColor: true,
+    blur: 3,
+    offsetX: 1,
+    offsetY: 1,
+  },
 };
 
 export default function App() {
@@ -88,6 +99,10 @@ export default function App() {
     for (const file of files) {
       try {
         const imageFile = await createImageFile(file);
+        const exifDate = await extractExifDate(file);
+        if (exifDate) {
+          imageFile.exifDate = exifDate;
+        }
         newImages.push(imageFile);
       } catch (error) {
         console.error('Failed to load image:', file.name, error);
@@ -336,6 +351,7 @@ export default function App() {
                   outputSettings={outputSettings}
                   canvasBackground={canvasBackground}
                   textOverlay={textOverlay}
+                  exifDate={selectedImage?.exifDate}
                   onBorderChange={setBorderSettings}
                   onResizeChange={setResizeSettings}
                   onOutputChange={setOutputSettings}
@@ -445,6 +461,7 @@ export default function App() {
                   outputSettings={outputSettings}
                   canvasBackground={canvasBackground}
                   textOverlay={textOverlay}
+                  exifDate={selectedImage?.exifDate}
                   onBorderChange={setBorderSettings}
                   onResizeChange={setResizeSettings}
                   onOutputChange={setOutputSettings}

@@ -8,6 +8,7 @@ export interface ImageFile {
   status: 'pending' | 'processing' | 'done' | 'error';
   processedBlob?: Blob;
   error?: string;
+  exifDate?: Date;
 }
 
 export interface GradientStop {
@@ -67,7 +68,21 @@ export interface Preset {
   targetAspectRatio?: AspectRatio;
 }
 
-export type TextPosition = 'bottom-center' | 'top-center' | 'bottom-left' | 'bottom-right' | 'top-left';
+export type TextPosition =
+  | 'top-left' | 'top-center' | 'top-right'
+  | 'middle-left' | 'middle-center' | 'middle-right'
+  | 'bottom-left' | 'bottom-center' | 'bottom-right';
+
+export type DateStampFormat = 'japanese' | 'american' | 'european';
+
+export interface TextShadowSettings {
+  enabled: boolean;
+  color: string;
+  useAutoColor: boolean;
+  blur: number;
+  offsetX: number;
+  offsetY: number;
+}
 
 export interface TextOverlaySettings {
   enabled: boolean;
@@ -75,12 +90,31 @@ export interface TextOverlaySettings {
   position: TextPosition;
   /** Multiplier (0.5–2.0) applied to the auto-computed base font size. */
   fontSize: number;
-  fontFamily: 'sans-serif' | 'serif' | 'monospace';
+  fontFamily: string;
+  fontWeight: number;
   /** Text color used when useAutoColor is false. */
   color: string;
   /** When true, pick color automatically for contrast against the border. */
   useAutoColor: boolean;
   opacity: number;
+  dateStampFormat: DateStampFormat;
+  textShadow: TextShadowSettings;
+}
+
+export interface FontWeight {
+  weight: number;
+  label: string;
+  url: string;
+}
+
+export interface FontMeta {
+  name: string;
+  family: string;
+  category: 'display' | 'sans-serif' | 'serif' | 'monospace' | 'handwriting';
+  weights: FontWeight[];
+  featured?: boolean;
+  tags?: string[];
+  bundled?: boolean;
 }
 
 export interface ProcessingResult {

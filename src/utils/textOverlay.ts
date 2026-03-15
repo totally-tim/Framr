@@ -9,7 +9,8 @@ interface BorderSizes {
 }
 
 /**
- * Draw a text overlay onto a canvas context positioned within the border area.
+ * Draw a text overlay onto a canvas context.
+ * Supports 9 positions (3x3 grid), font weight, and text shadow.
  * Works with both CanvasRenderingContext2D (preview) and
  * OffscreenCanvasRenderingContext2D (worker).
  */
@@ -34,31 +35,38 @@ export function drawTextOverlay(
 
   const color = settings.useAutoColor ? getContrastColor(borderColor) : settings.color;
 
+  const fontFamily = settings.fontFamily.includes(' ')
+    ? `"${settings.fontFamily}"`
+    : settings.fontFamily;
+  const fontWeight = settings.fontWeight || 400;
+
   ctx.save();
   ctx.globalAlpha = settings.opacity;
-  ctx.font = `${fontSize}px ${settings.fontFamily}`;
+  ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
   ctx.fillStyle = color;
   ctx.textBaseline = 'middle';
 
   const pos = settings.position;
+  const isMiddleRow = pos.startsWith('middle');
 
   // --- X position ---
   let textX: number;
-  if (pos === 'bottom-center' || pos === 'top-center') {
+  if (pos.endsWith('center')) {
     ctx.textAlign = 'center';
     textX = canvasWidth / 2;
-  } else if (pos === 'bottom-left' || pos === 'top-left') {
+  } else if (pos.endsWith('left')) {
     ctx.textAlign = 'left';
     textX = border.left * scale + padding;
   } else {
-    // bottom-right
     ctx.textAlign = 'right';
     textX = canvasWidth - border.right * scale - padding;
   }
 
   // --- Y position ---
   let textY: number;
-  if (pos.startsWith('top')) {
+  if (isMiddleRow) {
+    textY = canvasHeight / 2;
+  } else if (pos.startsWith('top')) {
     const topPx = border.top * scale;
     textY = topPx > fontSize ? topPx / 2 : fontSize / 2 + padding;
   } else {
@@ -66,6 +74,17 @@ export function drawTextOverlay(
     textY = botPx > fontSize
       ? canvasHeight - botPx / 2
       : canvasHeight - fontSize / 2 - padding;
+  }
+
+  // --- Text shadow ---
+  if (settings.textShadow?.enabled) {
+    const shadow = settings.textShadow;
+    ctx.shadowColor = shadow.useAutoColor
+      ? getContrastColor(color)
+      : shadow.color;
+    ctx.shadowBlur = shadow.blur * scale;
+    ctx.shadowOffsetX = shadow.offsetX * scale;
+    ctx.shadowOffsetY = shadow.offsetY * scale;
   }
 
   ctx.fillText(settings.text, textX, textY);
