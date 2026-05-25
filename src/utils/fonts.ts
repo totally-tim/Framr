@@ -303,8 +303,22 @@ const GENERIC_FAMILY_NAMES = new Set(['sans-serif', 'serif', 'monospace']);
 const RECENT_FONTS_KEY = 'framr-recent-fonts';
 const MAX_RECENT = 5;
 
-// Cache for resolved Google Fonts woff2 URLs
+// Cache for resolved Google Fonts woff2 URLs (bounded to avoid unbounded growth)
+const GOOGLE_FONT_CACHE_LIMIT = 50;
 const googleFontUrlCache = new Map<string, string>();
+
+/**
+ * Reject any URL that isn't hosted on Google's font CDN — guards against
+ * a poisoned CSS response specifying a third-party origin.
+ */
+function isTrustedFontUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:' && parsed.hostname === 'fonts.gstatic.com';
+  } catch {
+    return false;
+  }
+}
 
 export function isGenericFont(family: string): boolean {
   return GENERIC_FAMILY_NAMES.has(family);
@@ -394,21 +408,26 @@ async function resolveGoogleFontUrl(family: string, weight: number): Promise<str
       if (!response.ok) continue;
       const css = await response.text();
 
-      // Try multiple patterns — Google serves different CSS formats
-      // Pattern 1: url(https://...woff2) format('woff2')
-      // Pattern 2: url(https://...woff2)
       const matches = css.match(/url\(([^)]+\.woff2[^)]*)\)/g);
       if (matches && matches.length > 0) {
-        // Prefer the latin subset (usually the last @font-face block)
         const lastMatch = matches[matches.length - 1];
         const urlMatch = lastMatch.match(/url\(([^)]+)\)/);
         if (urlMatch) {
-          const url = urlMatch[1];
+          const url = urlMatch[1].replace(/^["']|["']$/g, '');
+          if (!isTrustedFontUrl(url)) {
+            console.warn(`Framr: rejecting untrusted font URL "${url}"`);
+            continue;
+          }
+          if (googleFontUrlCache.size >= GOOGLE_FONT_CACHE_LIMIT) {
+            const firstKey = googleFontUrlCache.keys().next().value;
+            if (firstKey !== undefined) googleFontUrlCache.delete(firstKey);
+          }
           googleFontUrlCache.set(cacheKey, url);
           return url;
         }
       }
-    } catch {
+    } catch (err) {
+      console.warn(`Framr: Google Fonts CSS fetch failed for ${apiUrl}`, err);
       continue;
     }
   }
@@ -495,7 +514,8 @@ export function getRecentFonts(): string[] {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
     return parsed.filter((x): x is string => typeof x === 'string').slice(0, MAX_RECENT);
-  } catch {
+  } catch (err) {
+    console.warn('Framr: could not read recent fonts', err);
     return [];
   }
 }
@@ -505,8 +525,8 @@ export function addRecentFont(name: string): void {
     const recent = getRecentFonts().filter((f) => f !== name);
     recent.unshift(name);
     localStorage.setItem(RECENT_FONTS_KEY, JSON.stringify(recent.slice(0, MAX_RECENT)));
-  } catch {
-    // localStorage might be unavailable
+  } catch (err) {
+    console.warn('Framr: could not persist recent font', err);
   }
 }
 
@@ -555,9 +575,13 @@ export async function fetchFontData(fontName: string, weight = 400): Promise<Arr
 
     if (!url) return null;
     const response = await fetch(url);
-    if (!response.ok) return null;
+    if (!response.ok) {
+      console.warn(`Framr: font binary fetch returned ${response.status} for "${fontName}"`);
+      return null;
+    }
     return await response.arrayBuffer();
-  } catch {
+  } catch (err) {
+    console.warn(`Framr: font binary fetch failed for "${fontName}"`, err);
     return null;
   }
 }

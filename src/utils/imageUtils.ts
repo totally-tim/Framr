@@ -13,15 +13,25 @@ export {
 import { getFileExtension, getMimeType } from './imageProcessing';
 
 export const SUPPORTED_FORMATS = ['image/jpeg', 'image/png', 'image/tiff', 'image/webp'];
-export const MAX_PREVIEW_SIZE = 1200;
+export const MAX_PREVIEW_SIZE = 1600;
 
 export function generateId(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID();
+  }
   return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 }
 
 export function isValidImageType(file: File): boolean {
   return SUPPORTED_FORMATS.includes(file.type) ||
     /\.(jpe?g|png|tiff?|webp)$/i.test(file.name);
+}
+
+export class ImageLoadError extends Error {
+  constructor(public readonly file: File, public readonly cause?: unknown) {
+    super(`Failed to decode image "${file.name}" (${file.type || 'unknown type'}, ${formatFileSize(file.size)})`);
+    this.name = 'ImageLoadError';
+  }
 }
 
 export async function loadImage(file: File): Promise<HTMLImageElement> {
@@ -34,9 +44,9 @@ export async function loadImage(file: File): Promise<HTMLImageElement> {
       resolve(img);
     };
 
-    img.onerror = () => {
+    img.onerror = (event) => {
       URL.revokeObjectURL(url);
-      reject(new Error('Failed to load image'));
+      reject(new ImageLoadError(file, event));
     };
 
     img.src = url;
@@ -53,13 +63,13 @@ export function createThumbnail(img: HTMLImageElement, maxSize: number = 200): P
     canvas.height = img.height * scale;
 
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    
+
     canvas.toBlob(
       (blob) => {
         if (blob) {
           resolve(URL.createObjectURL(blob));
         } else {
-          // Fallback to data URL if blob creation fails
+          console.warn('Framr: thumbnail toBlob returned null, falling back to data URL');
           resolve(canvas.toDataURL('image/jpeg', 0.7));
         }
       },
@@ -69,36 +79,14 @@ export function createThumbnail(img: HTMLImageElement, maxSize: number = 200): P
   });
 }
 
-/**
- * Clean up resources associated with an image.
- * Revokes object URLs and clears blob references to help garbage collection.
- */
 export function cleanupImageResources(image: ImageFile): void {
-  // Revoke thumbnailUrl if it's an object URL (starts with 'blob:')
   if (image.thumbnailUrl && image.thumbnailUrl.startsWith('blob:')) {
     URL.revokeObjectURL(image.thumbnailUrl);
   }
-  
-  // Clear processedBlob reference to help GC
-  if (image.processedBlob) {
-    (image as { processedBlob?: Blob }).processedBlob = undefined;
-  }
 }
 
-/**
- * Clean up resources for multiple images and their associated results.
- */
-export function cleanupAllImageResources(
-  images: ImageFile[],
-  results: { imageId: string; blob: Blob }[]
-): void {
-  // Clean up image resources
+export function cleanupAllImageResources(images: ImageFile[]): void {
   images.forEach(cleanupImageResources);
-  
-  // Clear result blob references
-  results.forEach(result => {
-    (result as { blob?: Blob }).blob = undefined;
-  });
 }
 
 export async function createImageFile(file: File): Promise<ImageFile> {

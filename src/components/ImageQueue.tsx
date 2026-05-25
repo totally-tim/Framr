@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import type { ImageFile } from '../types';
 
 interface ImageQueueProps {
@@ -6,16 +6,18 @@ interface ImageQueueProps {
   selectedId: string | null;
   onSelect: (id: string) => void;
   onRemove: (id: string) => void;
+  onRetry?: (id: string) => void;
   onAddMore: () => void;
   onClearAll: () => void;
   onReorderImages: (fromIndex: number, toIndex: number) => void;
 }
 
-export function ImageQueue({
+function ImageQueueImpl({
   images,
   selectedId,
   onSelect,
   onRemove,
+  onRetry,
   onAddMore,
   onClearAll,
   onReorderImages,
@@ -25,21 +27,23 @@ export function ImageQueue({
     onRemove(id);
   }, [onRemove]);
 
-  // Desktop DnD state
+  const handleRetry = useCallback((e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    onRetry?.(id);
+  }, [onRetry]);
+
   const dragIndexRef = useRef<number | null>(null);
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
-  // Touch DnD state
   const touchDragIndexRef = useRef<number | null>(null);
   const touchDragOverIndexRef = useRef<number | null>(null);
   const [touchDraggingIndex, setTouchDraggingIndex] = useState<number | null>(null);
   const [touchDragOverIndex, setTouchDragOverIndex] = useState<number | null>(null);
   const isDraggingTouchRef = useRef(false);
-  const touchStartPosRef = useRef<{x: number, y: number} | null>(null);
+  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
-  // Prevent scroll during touch drag (non-passive listener required)
   useEffect(() => {
     const el = listRef.current;
     if (!el) return;
@@ -50,8 +54,6 @@ export function ImageQueue({
     return () => el.removeEventListener('touchmove', handler);
   }, []);
 
-
-  // Desktop drag handlers
   const handleDragStart = useCallback((e: React.DragEvent, index: number) => {
     dragIndexRef.current = index;
     setDraggingIndex(index);
@@ -67,9 +69,7 @@ export function ImageQueue({
   const handleDrop = useCallback((e: React.DragEvent, toIndex: number) => {
     e.preventDefault();
     const fromIndex = dragIndexRef.current;
-    if (fromIndex !== null && fromIndex !== toIndex) {
-      onReorderImages(fromIndex, toIndex);
-    }
+    if (fromIndex !== null && fromIndex !== toIndex) onReorderImages(fromIndex, toIndex);
     dragIndexRef.current = null;
     setDraggingIndex(null);
     setDragOverIndex(null);
@@ -81,7 +81,6 @@ export function ImageQueue({
     setDragOverIndex(null);
   }, []);
 
-  // Touch drag handlers
   const handleTouchStart = useCallback((e: React.TouchEvent, index: number) => {
     touchDragIndexRef.current = index;
     touchDragOverIndexRef.current = index;
@@ -125,21 +124,32 @@ export function ImageQueue({
     setTouchDragOverIndex(null);
   }, [onReorderImages]);
 
+  const handleRowKeyDown = useCallback((e: React.KeyboardEvent, id: string) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onSelect(id);
+    }
+  }, [onSelect]);
+
   const getStatusIcon = (status: ImageFile['status']) => {
     switch (status) {
       case 'processing':
         return (
-          <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <div
+            className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full motion-safe:animate-spin"
+            role="img"
+            aria-label="Processing"
+          />
         );
       case 'done':
         return (
-          <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" role="img" aria-label="Done">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         );
       case 'error':
         return (
-          <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" role="img" aria-label="Failed">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         );
@@ -156,8 +166,9 @@ export function ImageQueue({
         </h3>
         {images.length > 0 && (
           <button
+            type="button"
             onClick={onClearAll}
-            className="text-xs text-gray-500 hover:text-red-500 transition-colors"
+            className="text-xs text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:rounded px-1"
             aria-label="Clear all images"
           >
             Clear all
@@ -170,16 +181,21 @@ export function ImageQueue({
         className="flex-1 overflow-y-auto scrollbar-thin p-2 space-y-2"
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        role="listbox"
+        aria-label="Loaded images"
+        aria-activedescendant={selectedId ? `img-row-${selectedId}` : undefined}
       >
         {images.map((image, index) => {
           const isDragged = index === draggingIndex || index === touchDraggingIndex;
           const isDropTarget =
             (index === dragOverIndex && dragOverIndex !== draggingIndex) ||
             (index === touchDragOverIndex && touchDragOverIndex !== touchDraggingIndex);
+          const isSelected = selectedId === image.id;
 
           return (
             <div
               key={image.id}
+              id={`img-row-${image.id}`}
               data-drag-index={index}
               draggable
               onDragStart={(e) => handleDragStart(e, index)}
@@ -188,23 +204,27 @@ export function ImageQueue({
               onDragEnd={handleDragEnd}
               onTouchStart={(e) => handleTouchStart(e, index)}
               onClick={() => onSelect(image.id)}
+              onKeyDown={(e) => handleRowKeyDown(e, image.id)}
               className={[
                 'group relative flex items-center gap-3 p-2 rounded-lg cursor-grab active:cursor-grabbing',
                 'transition-all duration-150 select-none',
+                'focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
                 isDropTarget ? 'border-t-2 border-blue-500' : 'border-t-2 border-transparent',
                 isDragged ? 'opacity-40' : 'opacity-100',
                 image.status === 'processing'
-                  ? 'bg-blue-50 dark:bg-blue-950/50 ring-2 ring-blue-400 animate-pulse'
-                  : selectedId === image.id
+                  ? 'bg-blue-50 dark:bg-blue-950/50 ring-2 ring-blue-400 motion-safe:animate-pulse'
+                  : isSelected
                     ? 'bg-blue-50 dark:bg-blue-950/50 ring-2 ring-blue-500'
                     : 'hover:bg-gray-50 dark:hover:bg-gray-800',
               ].join(' ')}
-              role="button"
-              aria-selected={selectedId === image.id}
-              tabIndex={0}
+              role="option"
+              aria-selected={isSelected}
+              tabIndex={isSelected ? 0 : -1}
             >
-              {/* Drag handle indicator */}
-              <div className="flex-shrink-0 text-gray-300 dark:text-gray-600 touch-none pointer-events-none">
+              {isSelected && (
+                <span className="sr-only">Selected.</span>
+              )}
+              <div className="flex-shrink-0 text-gray-300 dark:text-gray-600 touch-none pointer-events-none" aria-hidden="true">
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M8 6a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm8 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM8 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm8 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm-8 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm8 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" />
                 </svg>
@@ -213,7 +233,7 @@ export function ImageQueue({
               <div className="relative flex-shrink-0">
                 <img
                   src={image.thumbnailUrl}
-                  alt={image.name}
+                  alt=""
                   className="w-12 h-12 object-cover rounded"
                   draggable={false}
                 />
@@ -228,28 +248,39 @@ export function ImageQueue({
                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                   {image.name}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {image.originalWidth} x {image.originalHeight}
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  {image.originalWidth} × {image.originalHeight}
                 </p>
                 {image.error && (
-                  <p className="text-xs text-red-500 truncate">{image.error}</p>
+                  <p className="text-xs text-red-600 dark:text-red-400 truncate" title={image.error}>{image.error}</p>
                 )}
               </div>
 
-              <button
-                onClick={(e) => handleRemove(e, image.id)}
-                className={`
-                  flex-shrink-0 p-1 rounded-full
-                  opacity-0 group-hover:opacity-100
-                  hover:bg-gray-200 dark:hover:bg-gray-700
-                  transition-all duration-150
-                `}
-                aria-label={`Remove ${image.name}`}
-              >
-                <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+              <div className="flex items-center gap-1">
+                {image.status === 'error' && onRetry && (
+                  <button
+                    type="button"
+                    onClick={(e) => handleRetry(e, image.id)}
+                    className="flex-shrink-0 p-1.5 rounded-md text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/50 opacity-100 transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    aria-label={`Retry ${image.name}`}
+                    title="Retry"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={(e) => handleRemove(e, image.id)}
+                  className="flex-shrink-0 p-2 rounded-full opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                  aria-label={`Remove ${image.name}`}
+                >
+                  <svg className="w-4 h-4 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
             </div>
           );
         })}
@@ -257,14 +288,16 @@ export function ImageQueue({
 
       <div className="p-3 border-t">
         <button
+          type="button"
           onClick={onAddMore}
           className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg
             border border-dashed border-gray-300 dark:border-gray-600
             hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800
-            text-sm text-gray-600 dark:text-gray-300
-            transition-all duration-150"
+            text-sm text-gray-700 dark:text-gray-200
+            transition-all duration-150
+            focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
           Add more images
@@ -273,3 +306,5 @@ export function ImageQueue({
     </div>
   );
 }
+
+export const ImageQueue = memo(ImageQueueImpl);
