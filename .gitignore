@@ -38,3 +38,9 @@ coverage/
 
 # Playwright
 .playwright-mcp/
+
+# Agent-only working files (private; do not publish in this public repo)
+agent_docs/
+.fix-sprint-plan.md
+.claude-screenshots/
+.playwright-cli/
