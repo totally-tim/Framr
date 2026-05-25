@@ -136,7 +136,7 @@ function ImageQueueImpl({
       case 'processing':
         return (
           <div
-            className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full motion-safe:animate-spin"
+            className="w-4 h-4 border-2 border-ink-900 dark:border-paper-50 border-t-transparent rounded-full motion-safe:animate-spin"
             role="img"
             aria-label="Processing"
           />
@@ -160,15 +160,15 @@ function ImageQueueImpl({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-3 py-2 border-b">
-        <h3 className="font-medium text-sm text-gray-700 dark:text-gray-200">
-          Images ({images.length})
+      <div className="flex items-center justify-between px-3 py-3 border-b">
+        <h3 className="font-mono text-2xs uppercase tracking-[0.2em] text-ink-100 dark:text-darkroom-500">
+          Negatives · {images.length}
         </h3>
         {images.length > 0 && (
           <button
             type="button"
             onClick={onClearAll}
-            className="text-xs text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:rounded px-1"
+            className="text-2xs font-mono uppercase tracking-wider text-ink-100 dark:text-darkroom-500 hover:text-safelight-600 dark:hover:text-safelight-400 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-safelight-500 focus-visible:rounded px-1"
             aria-label="Clear all images"
           >
             Clear all
@@ -208,13 +208,13 @@ function ImageQueueImpl({
               className={[
                 'group relative flex items-center gap-3 p-2 rounded-lg cursor-grab active:cursor-grabbing',
                 'transition-all duration-150 select-none',
-                'focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
-                isDropTarget ? 'border-t-2 border-blue-500' : 'border-t-2 border-transparent',
+                'focus:outline-none focus-visible:ring-2 focus-visible:ring-safelight-500',
+                isDropTarget ? 'border-t-2 border-ink-900 dark:border-paper-50' : 'border-t-2 border-transparent',
                 isDragged ? 'opacity-40' : 'opacity-100',
                 image.status === 'processing'
-                  ? 'bg-blue-50 dark:bg-blue-950/50 ring-2 ring-blue-400 motion-safe:animate-pulse'
+                  ? 'bg-paper-200 dark:bg-darkroom-200 ring-2 ring-safelight-500 motion-safe:animate-pulse'
                   : isSelected
-                    ? 'bg-blue-50 dark:bg-blue-950/50 ring-2 ring-blue-500'
+                    ? 'bg-paper-200 dark:bg-darkroom-200 ring-2 ring-ink-900 dark:ring-paper-50'
                     : 'hover:bg-gray-50 dark:hover:bg-gray-800',
               ].join(' ')}
               role="option"
@@ -261,7 +261,7 @@ function ImageQueueImpl({
                   <button
                     type="button"
                     onClick={(e) => handleRetry(e, image.id)}
-                    className="flex-shrink-0 p-1.5 rounded-md text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/50 opacity-100 transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    className="flex-shrink-0 p-1.5 rounded-md text-xs text-safelight-600 dark:text-safelight-400 hover:bg-paper-100 dark:hover:bg-darkroom-200 opacity-100 transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-safelight-500"
                     aria-label={`Retry ${image.name}`}
                     title="Retry"
                   >
@@ -273,7 +273,7 @@ function ImageQueueImpl({
                 <button
                   type="button"
                   onClick={(e) => handleRemove(e, image.id)}
-                  className="flex-shrink-0 p-2 rounded-full opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                  className="flex-shrink-0 p-2 rounded-full opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-safelight-500"
                   aria-label={`Remove ${image.name}`}
                 >
                   <svg className="w-4 h-4 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -290,17 +290,18 @@ function ImageQueueImpl({
         <button
           type="button"
           onClick={onAddMore}
-          className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg
-            border border-dashed border-gray-300 dark:border-gray-600
-            hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800
-            text-sm text-gray-700 dark:text-gray-200
+          className="w-full flex items-center justify-center gap-2 py-2.5 px-3
+            border border-dashed border-paper-400 dark:border-darkroom-400
+            hover:border-ink-100 dark:hover:border-darkroom-500
+            hover:bg-paper-100/50 dark:hover:bg-darkroom-200/50
+            text-2xs font-mono uppercase tracking-[0.18em] text-ink-100 dark:text-darkroom-500 hover:text-ink-600 dark:hover:text-paper-100
             transition-all duration-150
-            focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+            focus:outline-none focus-visible:ring-2 focus-visible:ring-safelight-500 focus-visible:ring-offset-2"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          Add more images
+          Add more
         </button>
       </div>
     </div>

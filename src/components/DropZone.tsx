@@ -115,6 +115,7 @@ export function DropZone({ onFilesSelected, disabled = false, hasImages = false 
   );
 
   if (hasImages) {
+    // Compact "add more" tile — visually quieter, still a film-strip echo.
     return (
       <div
         onDragEnter={handleDragEnter}
@@ -124,11 +125,10 @@ export function DropZone({ onFilesSelected, disabled = false, hasImages = false 
         onPaste={handlePaste}
         className={`
           relative flex items-center gap-3 px-4 py-3
-          border-2 border-dashed rounded-lg
-          transition-all duration-200
+          border border-dashed transition-all duration-200
           ${isDragging
-            ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30 drop-zone-active'
-            : 'border-gray-200 dark:border-gray-700 hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+            ? 'border-safelight-500 bg-safelight-50 dark:bg-safelight-700/10 drop-zone-active'
+            : 'border-paper-400 dark:border-darkroom-400 hover:border-ink-100 dark:hover:border-darkroom-500 hover:bg-paper-100 dark:hover:bg-darkroom-200/50'
           }
           ${disabled ? 'opacity-50' : ''}
         `}
@@ -138,39 +138,37 @@ export function DropZone({ onFilesSelected, disabled = false, hasImages = false 
           htmlFor={inputId}
           onKeyDown={handleKeyDown}
           tabIndex={disabled ? -1 : 0}
-          className={`absolute inset-0 cursor-pointer ${disabled ? 'cursor-not-allowed' : ''} focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:rounded-lg`}
+          className={`absolute inset-0 cursor-pointer ${disabled ? 'cursor-not-allowed' : ''} focus:outline-none`}
           aria-label="Add more images"
         >
           <span className="sr-only">Add more images</span>
         </label>
 
-        <div className={`
-          p-1.5 rounded-full flex-shrink-0
-          ${isDragging ? 'bg-blue-100 dark:bg-blue-900' : 'bg-gray-100 dark:bg-gray-800'}
-        `} aria-hidden="true">
+        <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center border border-paper-400 dark:border-darkroom-400" aria-hidden="true">
           <svg
-            className={`w-4 h-4 ${isDragging ? 'text-blue-500' : 'text-gray-500 dark:text-gray-300'}`}
+            className={`w-3.5 h-3.5 ${isDragging ? 'text-safelight-600' : 'text-ink-100 dark:text-darkroom-500'}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            strokeWidth={1.5}
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            <path strokeLinecap="round" d="M12 5v14M5 12h14" />
           </svg>
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className={`text-sm font-medium truncate ${isDragging ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-200'}`}>
+          <p className={`text-xs font-mono uppercase tracking-[0.15em] truncate ${isDragging ? 'text-safelight-600' : 'text-ink-900 dark:text-paper-50'}`}>
             {isDragging && dragCount > 0
-              ? `Drop ${dragCount} file${dragCount !== 1 ? 's' : ''} here`
-              : 'Add more images'}
+              ? `Drop ${dragCount} file${dragCount !== 1 ? 's' : ''}`
+              : 'Add more'}
           </p>
-          <p id={descId} className="text-xs text-gray-500 dark:text-gray-400 truncate">
+          <p id={descId} className="text-xs text-ink-100 dark:text-darkroom-500 truncate">
             Drop or click to browse
           </p>
         </div>
 
         {error && (
-          <p id={errorId} className="text-xs text-amber-700 dark:text-amber-300 flex-shrink-0" role="status">
+          <p id={errorId} className="text-xs text-safelight-600 dark:text-safelight-400 flex-shrink-0 font-mono" role="status">
             {error}
           </p>
         )}
@@ -178,6 +176,7 @@ export function DropZone({ onFilesSelected, disabled = false, hasImages = false 
     );
   }
 
+  // Hero empty state — film-strip drop zone with sprocket holes.
   return (
     <div
       onDragEnter={handleDragEnter}
@@ -186,14 +185,7 @@ export function DropZone({ onFilesSelected, disabled = false, hasImages = false 
       onDrop={handleDrop}
       onPaste={handlePaste}
       className={`
-        relative flex flex-col items-center justify-center
-        min-h-[300px] md:min-h-[400px]
-        border-2 border-dashed rounded-xl
-        transition-all duration-200
-        ${isDragging
-          ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30 drop-zone-active'
-          : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'
-        }
+        relative transition-all duration-300
         ${disabled ? 'opacity-50' : ''}
       `}
     >
@@ -202,52 +194,112 @@ export function DropZone({ onFilesSelected, disabled = false, hasImages = false 
         htmlFor={inputId}
         onKeyDown={handleKeyDown}
         tabIndex={disabled ? -1 : 0}
-        className={`absolute inset-0 cursor-pointer ${disabled ? 'cursor-not-allowed' : ''} focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:rounded-xl`}
+        className={`absolute inset-0 z-20 cursor-pointer ${disabled ? 'cursor-not-allowed' : ''} focus:outline-none focus-visible:ring-2 focus-visible:ring-safelight-500 focus-visible:ring-offset-4`}
         aria-label="Drop images here, or click to browse"
       >
         <span className="sr-only">Drop images here, or click to browse</span>
       </label>
 
-      <div className="flex flex-col items-center gap-4 p-8 text-center pointer-events-none">
-        <div className={`
-          p-5 rounded-full transition-colors duration-200
-          ${isDragging ? 'bg-blue-100 dark:bg-blue-900' : 'bg-gray-100 dark:bg-gray-800'}
-        `} aria-hidden="true">
-          <svg
-            className={`w-14 h-14 transition-colors duration-200 ${isDragging ? 'text-blue-500' : 'text-gray-500 dark:text-gray-300'}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1.5}
-              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-            />
-          </svg>
+      {/* Top sprocket edge */}
+      <div
+        className={`h-6 bg-ink-900 dark:bg-darkroom-0 sprocket-edge ${isDragging ? 'is-active' : ''}`}
+        aria-hidden="true"
+      />
+
+      {/* Film body */}
+      <div
+        className={`
+          relative bg-ink-900 dark:bg-darkroom-0 border-x border-paper-300/20 dark:border-darkroom-400/30
+          min-h-[360px] md:min-h-[440px]
+          flex flex-col items-center justify-center
+          overflow-hidden
+        `}
+      >
+        {/* Inner paper "frame" — what the photographer sees when no negatives are loaded. */}
+        <div
+          className={`
+            relative mx-6 my-6 md:mx-12 md:my-10 flex-1 self-stretch
+            border transition-colors duration-200
+            ${isDragging
+              ? 'border-safelight-500 drop-zone-active bg-safelight-50/5'
+              : 'border-paper-300/30 dark:border-darkroom-400/40 group-hover:border-paper-300/50'
+            }
+            flex flex-col items-center justify-center
+          `}
+        >
+          {/* Decorative corner crops */}
+          <Crop className="top-2 left-2" />
+          <Crop className="top-2 right-2 rotate-90" />
+          <Crop className="bottom-2 right-2 rotate-180" />
+          <Crop className="bottom-2 left-2 -rotate-90" />
+
+          <div className="flex flex-col items-center gap-5 px-6 py-12 text-center pointer-events-none">
+            <span
+              className="text-2xs font-mono uppercase tracking-[0.35em] text-safelight-500"
+              aria-hidden="true"
+            >
+              {isDragging ? 'Holding negative…' : 'Drop negatives here'}
+            </span>
+
+            <h2 className="font-display text-3xl md:text-4xl font-light text-paper-50 leading-[1.05] tracking-tighter max-w-md">
+              {isDragging
+                ? (dragCount > 0 ? `Loading ${dragCount} image${dragCount !== 1 ? 's' : ''}` : 'Loading images')
+                : <>Drag a photograph<br />onto the frame</>}
+            </h2>
+
+            <p id={descId} className="text-sm text-paper-300/80 max-w-xs">
+              Or <span className="underline underline-offset-2 decoration-paper-300/50">click anywhere</span> to browse your device. Everything stays on this machine — no upload, no account, no trace.
+            </p>
+
+            <div className="flex items-center gap-3 mt-2 font-mono text-2xs uppercase tracking-[0.2em] text-paper-300/60">
+              <span>JPEG</span>
+              <span className="w-1 h-1 rounded-full bg-paper-300/30" aria-hidden="true" />
+              <span>PNG</span>
+              <span className="w-1 h-1 rounded-full bg-paper-300/30" aria-hidden="true" />
+              <span>TIFF</span>
+              <span className="w-1 h-1 rounded-full bg-paper-300/30" aria-hidden="true" />
+              <span>WebP</span>
+            </div>
+          </div>
         </div>
 
-        <div className="space-y-2">
-          <p className="text-xl font-semibold text-gray-800 dark:text-gray-100">
-            {isDragging
-              ? (dragCount > 0 ? `Drop ${dragCount} image${dragCount !== 1 ? 's' : ''} here` : 'Drop images here')
-              : 'Drop images here or click to browse'}
-          </p>
-          <p id={descId} className="text-sm text-gray-600 dark:text-gray-300">
-            Drag &amp; drop or click to select from your device
-          </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            Supports JPEG, PNG, TIFF, WebP
-          </p>
+        {/* Caption strip — light-leak gradient on drag */}
+        <div className="px-6 md:px-12 py-3 flex items-center justify-between border-t border-paper-300/15 dark:border-darkroom-400/30">
+          <span className="font-mono text-2xs uppercase tracking-[0.2em] text-paper-300/50">
+            Framr · iso 100
+          </span>
+          <span className="font-mono text-2xs uppercase tracking-[0.2em] text-paper-300/50">
+            {isDragging ? '— exposing —' : 'ready'}
+          </span>
         </div>
-
-        {error && (
-          <p id={errorId} className="text-sm text-amber-700 dark:text-amber-300 mt-2" role="status">
-            {error}
-          </p>
-        )}
       </div>
+
+      {/* Bottom sprocket edge */}
+      <div
+        className={`h-6 bg-ink-900 dark:bg-darkroom-0 sprocket-edge ${isDragging ? 'is-active' : ''}`}
+        aria-hidden="true"
+      />
+
+      {error && (
+        <p id={errorId} className="mt-3 text-sm text-safelight-600 dark:text-safelight-400 font-mono text-center" role="status">
+          {error}
+        </p>
+      )}
     </div>
+  );
+}
+
+function Crop({ className }: { className?: string }) {
+  return (
+    <svg
+      className={`absolute w-3 h-3 text-paper-300/40 ${className ?? ''}`}
+      viewBox="0 0 12 12"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.2}
+      aria-hidden="true"
+    >
+      <path d="M0 4 V0 H4" />
+    </svg>
   );
 }

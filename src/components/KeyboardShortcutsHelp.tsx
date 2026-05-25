@@ -51,7 +51,7 @@ export function KeyboardShortcutsHelp({ isOpen: controlledOpen, onOpenChange }: 
         ref={triggerRef}
         type="button"
         onClick={() => setOpen(!open)}
-        className="w-11 h-11 md:w-9 md:h-9 rounded-full border text-sm font-bold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+        className="w-11 h-11 md:w-9 md:h-9 rounded-full border text-sm font-bold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-safelight-500 focus-visible:ring-offset-2"
         aria-label="Keyboard shortcuts"
         aria-haspopup="dialog"
         aria-expanded={open}
@@ -77,7 +77,7 @@ export function KeyboardShortcutsHelp({ isOpen: controlledOpen, onOpenChange }: 
                 ref={closeBtnRef}
                 type="button"
                 onClick={() => setOpen(false)}
-                className="p-1 rounded -mr-1 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                className="p-1 rounded -mr-1 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-safelight-500"
                 aria-label="Close shortcuts dialog"
               >
                 <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">

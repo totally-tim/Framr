@@ -164,37 +164,87 @@ function PresetButtonsImpl({ currentBorder, currentResize, currentOutput, onAppl
   return (
     <div className="space-y-3">
       <div>
-        <h3 className="font-medium text-sm text-gray-700 dark:text-gray-200 uppercase tracking-wider mb-2">
-          Quick Presets
+        <h3 className="font-mono text-2xs uppercase tracking-[0.2em] text-ink-100 dark:text-darkroom-500 mb-3">
+          Quick Frames
         </h3>
-        <div className="flex flex-wrap gap-2" role="group" aria-label="Quick border presets">
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-2" role="group" aria-label="Quick border presets">
           {DEFAULT_PRESETS.map((preset) => {
             const active = isDefaultActive(preset);
+            const widthRatio = preset.border.width / 25;
+            const isWhite = preset.border.color === '#FFFFFF';
             return (
               <button
                 key={preset.id}
                 type="button"
                 onClick={() => onApply(preset.border)}
                 className={`
-                  px-3 py-2 min-h-[36px] text-sm rounded-lg transition-all
-                  focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2
+                  group relative flex flex-col gap-1.5 p-1.5 transition-all
+                  focus:outline-none border
                   ${active
-                    ? 'bg-blue-600 text-white shadow-md'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    ? 'border-ink-900 dark:border-paper-50 bg-paper-50 dark:bg-darkroom-200 shadow-print dark:shadow-print-dark'
+                    : 'border-paper-300 dark:border-darkroom-300 bg-paper-50/50 dark:bg-darkroom-100/50 hover:border-ink-100 dark:hover:border-darkroom-500 hover:bg-paper-50 dark:hover:bg-darkroom-200'
                   }
                 `}
                 title={preset.description}
                 aria-pressed={active}
                 aria-label={`${preset.name} preset${active ? ', selected' : ''}`}
               >
-                <span className="flex items-center gap-1.5">
-                  {active && checkmark}
-                  <span
-                    className="w-4 h-4 rounded-sm border border-gray-300 dark:border-gray-600"
-                    style={{ backgroundColor: preset.border.color }}
-                    aria-hidden="true"
+                <div
+                  className="relative w-full aspect-[4/3] flex items-center justify-center overflow-hidden"
+                  style={{ backgroundColor: preset.border.color }}
+                  aria-hidden="true"
+                >
+                  <div
+                    className="absolute bg-gradient-to-br from-ink-100 via-safelight-400 to-ink-100"
+                    style={{
+                      inset: `${widthRatio * 22}%`,
+                    }}
                   />
-                  {preset.name}
+                </div>
+                <div className="flex items-center justify-between gap-1">
+                  <span className={`font-mono text-2xs uppercase tracking-wider truncate ${active ? 'text-ink-900 dark:text-paper-50' : 'text-ink-600 dark:text-paper-100'}`}>
+                    {preset.name}
+                  </span>
+                  {active && (
+                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isWhite ? 'bg-ink-900 dark:bg-paper-50' : 'bg-safelight-500'}`} aria-hidden="true" />
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div>
+        <h3 className="font-mono text-2xs uppercase tracking-[0.2em] text-ink-100 dark:text-darkroom-500 mb-3">
+          Aspect Ratios
+        </h3>
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-2" role="group" aria-label="Social media aspect-ratio presets">
+          {SOCIAL_PRESETS.map((preset) => {
+            const aspectStyle = preset.targetAspectRatio.width / preset.targetAspectRatio.height;
+            const w = aspectStyle >= 1 ? 32 : Math.round(32 * aspectStyle);
+            const h = aspectStyle >= 1 ? Math.round(32 / aspectStyle) : 32;
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => onApply(SOCIAL_BORDER, undefined, undefined, preset.targetAspectRatio)}
+                className="group flex items-center gap-2 p-2 transition-all border border-paper-300 dark:border-darkroom-300 bg-paper-50/50 dark:bg-darkroom-100/50 hover:border-ink-100 dark:hover:border-darkroom-500 hover:bg-paper-50 dark:hover:bg-darkroom-200 focus:outline-none"
+                title={preset.description}
+                aria-label={`${preset.platform} ${preset.name}`}
+              >
+                <span
+                  className="flex-shrink-0 border border-ink-600 dark:border-paper-100"
+                  style={{ width: `${w}px`, height: `${h}px` }}
+                  aria-hidden="true"
+                />
+                <span className="flex flex-col items-start min-w-0">
+                  <span className="font-mono text-2xs uppercase tracking-wider text-ink-600 dark:text-paper-100">
+                    {preset.name}
+                  </span>
+                  <span className="text-2xs text-ink-100 dark:text-darkroom-500 truncate">
+                    {preset.platform}
+                  </span>
                 </span>
               </button>
             );
@@ -203,38 +253,15 @@ function PresetButtonsImpl({ currentBorder, currentResize, currentOutput, onAppl
       </div>
 
       <div>
-        <h3 className="font-medium text-sm text-gray-700 dark:text-gray-200 uppercase tracking-wider mb-2">
-          Social
-        </h3>
-        <div className="flex flex-wrap gap-2" role="group" aria-label="Social media aspect-ratio presets">
-          {SOCIAL_PRESETS.map((preset) => (
-            <button
-              key={preset.id}
-              type="button"
-              onClick={() => onApply(SOCIAL_BORDER, undefined, undefined, preset.targetAspectRatio)}
-              className="px-3 py-2 min-h-[36px] text-sm rounded-lg transition-all bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-              title={preset.description}
-              aria-label={`${preset.platform} ${preset.name}`}
-            >
-              <span className="flex items-center gap-1.5">
-                <span className="text-xs text-gray-500 dark:text-gray-400">{preset.platform}</span>
-                <span className="font-medium">{preset.name}</span>
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="font-medium text-sm text-gray-700 dark:text-gray-200 uppercase tracking-wider">
-            My Presets
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-mono text-2xs uppercase tracking-[0.2em] text-ink-100 dark:text-darkroom-500">
+            My Frames
           </h3>
           {!showSaveInput && (
             <button
               type="button"
               onClick={() => setShowSaveInput(true)}
-              className="text-xs px-2 py-1 rounded-md bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              className="text-2xs font-mono uppercase tracking-wider px-2 py-1 text-safelight-700 dark:text-safelight-400 hover:bg-safelight-50 dark:hover:bg-safelight-700/10 transition-colors focus:outline-none"
               aria-label="Save current settings as a preset"
             >
               + Save current
@@ -253,21 +280,21 @@ function PresetButtonsImpl({ currentBorder, currentResize, currentOutput, onAppl
               onChange={(e) => setSaveName(e.target.value)}
               onKeyDown={handleSaveKeyDown}
               placeholder="Preset name…"
-              className="flex-1 text-sm px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 text-sm px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-safelight-500"
               maxLength={40}
             />
             <button
               type="button"
               onClick={handleSave}
               disabled={!saveName.trim()}
-              className="text-sm px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+              className="text-sm px-3 py-1.5 rounded-sm bg-ink-900 dark:bg-paper-50 text-paper-50 dark:text-ink-900 hover:bg-ink-600 dark:hover:bg-paper-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-safelight-500 focus-visible:ring-offset-2"
             >
               Save
             </button>
             <button
               type="button"
               onClick={() => { setSaveName(''); setShowSaveInput(false); }}
-              className="text-sm px-2.5 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              className="text-sm px-2.5 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-safelight-500"
             >
               Cancel
             </button>
@@ -275,8 +302,8 @@ function PresetButtonsImpl({ currentBorder, currentResize, currentOutput, onAppl
         )}
 
         {customPresets.length === 0 && !showSaveInput ? (
-          <p className="text-xs text-gray-500 dark:text-gray-400 italic">
-            No saved presets yet. Click &quot;Save current&quot; to add one.
+          <p className="text-xs text-ink-100 dark:text-darkroom-500 italic font-serif">
+            No saved frames yet. Click &quot;Save current&quot; to add one.
           </p>
         ) : (
           <div className="flex flex-wrap gap-2">
@@ -286,10 +313,10 @@ function PresetButtonsImpl({ currentBorder, currentResize, currentOutput, onAppl
                 <div
                   key={preset.id}
                   className={`
-                    flex items-center gap-1 pl-2.5 pr-1 py-1 rounded-lg text-sm border transition-all
+                    flex items-center gap-1 pl-2.5 pr-1 py-1 text-sm border transition-all
                     ${active
-                      ? 'bg-violet-600 border-violet-600 text-white shadow-md'
-                      : 'bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-700 text-violet-800 dark:text-violet-200 hover:bg-violet-100 dark:hover:bg-violet-900/40'
+                      ? 'bg-safelight-500 border-safelight-500 text-paper-50 shadow-print dark:shadow-print-dark'
+                      : 'bg-paper-50/60 dark:bg-darkroom-200/60 border-safelight-400/40 dark:border-safelight-500/30 text-ink-900 dark:text-paper-50 hover:bg-safelight-50 dark:hover:bg-safelight-700/10'
                     }
                   `}
                 >
@@ -315,14 +342,14 @@ function PresetButtonsImpl({ currentBorder, currentResize, currentOutput, onAppl
                     <button
                       type="button"
                       onClick={() => onApply(preset.border, preset.resize, preset.output)}
-                      className="flex items-center gap-1.5 min-h-[32px] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:rounded"
+                      className="flex items-center gap-1.5 min-h-[32px] focus:outline-none"
                       aria-label={`Apply preset ${preset.name}${active ? ', selected' : ''}`}
                       aria-pressed={active}
                       title={`Apply "${preset.name}"`}
                     >
                       {active && checkmark}
                       <span
-                        className="w-3 h-3 rounded-sm border border-current opacity-70"
+                        className="w-3 h-3 border border-current opacity-70"
                         style={{ backgroundColor: preset.border.color }}
                         aria-hidden="true"
                       />
@@ -333,7 +360,7 @@ function PresetButtonsImpl({ currentBorder, currentResize, currentOutput, onAppl
                   <button
                     type="button"
                     onClick={() => startRename(preset)}
-                    className="ml-0.5 opacity-70 hover:opacity-100 transition-opacity p-1.5 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    className="ml-0.5 opacity-70 hover:opacity-100 transition-opacity p-1.5 focus:outline-none"
                     aria-label={`Rename preset ${preset.name}`}
                     title="Rename"
                   >
@@ -345,7 +372,7 @@ function PresetButtonsImpl({ currentBorder, currentResize, currentOutput, onAppl
                   <button
                     type="button"
                     onClick={() => deletePreset(preset.id)}
-                    className="opacity-70 hover:opacity-100 transition-opacity p-1.5 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    className="opacity-70 hover:opacity-100 transition-opacity p-1.5 focus:outline-none"
                     aria-label={`Delete preset ${preset.name}`}
                     title="Delete preset"
                   >

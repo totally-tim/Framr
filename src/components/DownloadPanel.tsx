@@ -88,14 +88,14 @@ function DownloadPanelImpl({
             aria-valuenow={Math.round(progress)}
           >
             <div
-              className="h-full bg-blue-600 transition-all duration-300"
+              className="h-full bg-ink-900 dark:bg-paper-50 transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
           </div>
           <button
             type="button"
             onClick={onCancel}
-            className="w-full py-2 text-sm text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
+            className="w-full py-2 text-sm text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-safelight-500 focus-visible:ring-offset-2"
             aria-label="Cancel processing"
           >
             Cancel
@@ -171,7 +171,7 @@ function DownloadPanelImpl({
                 aria-valuenow={Math.round(zipProgress)}
               >
                 <div
-                  className="h-full bg-blue-600 transition-all duration-150"
+                  className="h-full bg-ink-900 dark:bg-paper-50 transition-all duration-150"
                   style={{ width: `${zipProgress}%` }}
                 />
               </div>

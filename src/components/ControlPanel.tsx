@@ -23,10 +23,10 @@ function SwitchToggle({ checked, onChange, label, size = 'md' }: SwitchTogglePro
       aria-checked={checked}
       aria-label={label}
       onClick={onChange}
-      className={`relative ${dims} rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${checked ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}
+      className={`relative ${dims} rounded-full transition-colors focus:outline-none ${checked ? 'bg-ink-900 dark:bg-paper-50' : 'bg-paper-300 dark:bg-darkroom-300'}`}
     >
       <span
-        className={`absolute ${thumb} bg-white rounded-full transition-transform ${checked ? translate : ''}`}
+        className={`absolute ${thumb} rounded-full transition-transform ${checked ? `${translate} bg-paper-50 dark:bg-ink-900` : 'bg-paper-50 dark:bg-paper-100'}`}
         aria-hidden="true"
       />
     </button>
@@ -146,7 +146,7 @@ function ControlPanelImpl({
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        <h3 className="font-medium text-sm text-gray-700 dark:text-gray-200 uppercase tracking-wider">
+        <h3 className="font-mono text-2xs uppercase tracking-[0.2em] text-ink-100 dark:text-darkroom-500">
           Border
         </h3>
 
@@ -159,7 +159,7 @@ function ControlPanelImpl({
                 type="number"
                 value={borderSettings.width}
                 onChange={(e) => handleWidthChange(Math.max(0, parseInt(e.target.value) || 0))}
-                className="w-16 px-2 py-1 text-sm text-right rounded border bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-16 px-2 py-1 text-sm text-right rounded border bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-safelight-500"
                 min={0}
                 max={borderSettings.widthUnit === '%' ? 50 : 1000}
                 aria-label="Border width"
@@ -195,7 +195,7 @@ function ControlPanelImpl({
                 className={`
                   flex-1 py-1.5 text-xs font-medium transition-colors
                   ${borderSettings.borderMode === mode
-                    ? 'bg-blue-500 text-white'
+                    ? 'bg-ink-900 text-paper-50 dark:bg-paper-50 dark:text-ink-900'
                     : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                   }
                 `}
@@ -224,7 +224,7 @@ function ControlPanelImpl({
                 value={colorInput}
                 onChange={(e) => handleColorChange(e.target.value)}
                 onBlur={handleColorInputBlur}
-                className="flex-1 px-3 py-2 text-sm rounded border bg-white dark:bg-gray-800 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-3 py-2 text-sm rounded border bg-white dark:bg-gray-800 font-mono focus:outline-none focus:ring-2 focus:ring-safelight-500"
                 placeholder="#FFFFFF"
                 aria-label="Border color hex value"
               />
@@ -239,9 +239,9 @@ function ControlPanelImpl({
                     onClick={() => handlePresetColorClick(preset.value)}
                     className={`
                       relative w-9 h-9 rounded border-2 transition-all
-                      focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2
+                      focus:outline-none focus-visible:ring-2 focus-visible:ring-safelight-500 focus-visible:ring-offset-2
                       ${active
-                        ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-gray-900'
+                        ? 'ring-2 ring-ink-900 dark:ring-paper-50 ring-offset-2 dark:ring-offset-darkroom-100'
                         : 'hover:scale-110'
                       }
                     `}
@@ -363,7 +363,7 @@ function ControlPanelImpl({
                         const stops = borderSettings.gradientStops.filter((_, i) => i !== idx);
                         onBorderChange({ ...borderSettings, gradientStops: stops });
                       }}
-                      className="p-2 min-w-[36px] min-h-[36px] text-gray-500 dark:text-gray-400 hover:text-red-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded"
+                      className="p-2 min-w-[36px] min-h-[36px] text-gray-500 dark:text-gray-400 hover:text-red-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-safelight-500 rounded"
                       aria-label={`Remove color stop ${idx + 1}`}
                       title="Remove stop"
                     >
@@ -380,7 +380,7 @@ function ControlPanelImpl({
                     const stops = [...borderSettings.gradientStops, createGradientStop('#888888', 50)];
                     onBorderChange({ ...borderSettings, gradientStops: stops });
                   }}
-                  className="text-xs text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+                  className="text-xs text-safelight-600 dark:text-safelight-400 hover:text-safelight-700 dark:hover:text-safelight-300 transition-colors"
                 >
                   + Add stop
                 </button>
@@ -391,7 +391,7 @@ function ControlPanelImpl({
       </div>
 
       <div className="space-y-4">
-        <h3 className="font-medium text-sm text-gray-700 dark:text-gray-200 uppercase tracking-wider">
+        <h3 className="font-mono text-2xs uppercase tracking-[0.2em] text-ink-100 dark:text-darkroom-500">
           Canvas Background
         </h3>
 
@@ -422,7 +422,7 @@ function ControlPanelImpl({
                 value={canvasBgInput}
                 onChange={(e) => handleCanvasBgColorChange(e.target.value)}
                 onBlur={handleCanvasBgInputBlur}
-                className="flex-1 px-3 py-2 text-sm rounded border bg-white dark:bg-gray-800 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-3 py-2 text-sm rounded border bg-white dark:bg-gray-800 font-mono focus:outline-none focus:ring-2 focus:ring-safelight-500"
                 placeholder="#808080"
                 aria-label="Canvas background hex value"
               />
@@ -438,9 +438,9 @@ function ControlPanelImpl({
                     onClick={() => handleCanvasBgPresetClick(preset.value)}
                     className={`
                       w-9 h-9 rounded border-2 transition-all
-                      focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2
+                      focus:outline-none focus-visible:ring-2 focus-visible:ring-safelight-500 focus-visible:ring-offset-2
                       ${active
-                        ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-gray-900'
+                        ? 'ring-2 ring-ink-900 dark:ring-paper-50 ring-offset-2 dark:ring-offset-darkroom-100'
                         : 'hover:scale-110'
                       }
                     `}
@@ -468,7 +468,7 @@ function ControlPanelImpl({
           onClick={() => setShowAdvanced(!showAdvanced)}
           aria-expanded={showAdvanced}
           aria-controls="advanced-settings-region"
-          className="flex items-center justify-between w-full py-2 min-h-[44px] text-sm text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:rounded"
+          className="flex items-center justify-between w-full py-2 min-h-[44px] text-sm text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-safelight-500 focus-visible:rounded"
         >
           <span>Advanced Settings</span>
           <svg
@@ -494,7 +494,7 @@ function ControlPanelImpl({
                     className={`
                       flex-1 py-2 text-sm font-medium transition-colors
                       ${borderSettings.widthUnit === unit
-                        ? 'bg-blue-500 text-white'
+                        ? 'bg-ink-900 text-paper-50 dark:bg-paper-50 dark:text-ink-900'
                         : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                       }
                     `}
@@ -534,7 +534,7 @@ function ControlPanelImpl({
               </div>
 
               {resizeSettings.enabled && (
-                <div className="space-y-3 pl-2 border-l-2 border-blue-200 dark:border-blue-800">
+                <div className="space-y-3 pl-2 border-l-2 border-safelight-500/40">
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label htmlFor={resizeWidthId} className="text-xs text-gray-600 dark:text-gray-300">Width</label>
@@ -546,7 +546,7 @@ function ControlPanelImpl({
                           ...resizeSettings,
                           width: e.target.value ? parseInt(e.target.value) : undefined
                         })}
-                        className="w-full mt-1 px-2 py-1.5 text-sm rounded border bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full mt-1 px-2 py-1.5 text-sm rounded border bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-safelight-500"
                         placeholder="Auto"
                         min={1}
                       />
@@ -561,7 +561,7 @@ function ControlPanelImpl({
                           ...resizeSettings,
                           height: e.target.value ? parseInt(e.target.value) : undefined
                         })}
-                        className="w-full mt-1 px-2 py-1.5 text-sm rounded border bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full mt-1 px-2 py-1.5 text-sm rounded border bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-safelight-500"
                         placeholder="Auto"
                         min={1}
                       />
@@ -578,7 +578,7 @@ function ControlPanelImpl({
                           className={`
                             px-3 py-1 text-xs font-medium transition-colors
                             ${resizeSettings.unit === unit
-                              ? 'bg-blue-500 text-white'
+                              ? 'bg-ink-900 text-paper-50 dark:bg-paper-50 dark:text-ink-900'
                               : 'bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700'
                             }
                           `}
@@ -611,7 +611,7 @@ function ControlPanelImpl({
                   id={formatId}
                   value={outputSettings.format}
                   onChange={(e) => onOutputChange({ ...outputSettings, format: e.target.value as OutputSettings['format'] })}
-                  className="w-full px-3 py-2 text-sm rounded border bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 text-sm rounded border bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-safelight-500"
                 >
                   <option value="original">Same as input</option>
                   <option value="jpeg">JPEG</option>

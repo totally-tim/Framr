@@ -340,8 +340,8 @@ export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBac
 
   if (!image) {
     return (
-      <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
-        <p>Select an image to preview</p>
+      <div className="flex items-center justify-center h-full text-ink-100 dark:text-darkroom-500 font-display text-lg italic">
+        <p>Select a negative to preview</p>
       </div>
     );
   }
@@ -363,7 +363,7 @@ export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBac
       >
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-black/50" aria-live="polite">
-            <div className="w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-full motion-safe:animate-spin" role="img" aria-label="Loading preview" />
+            <div className="w-8 h-8 border-3 border-ink-900 dark:border-paper-50 border-t-transparent rounded-full motion-safe:animate-spin" role="img" aria-label="Loading preview" />
           </div>
         )}
 
@@ -444,16 +444,37 @@ export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBac
             </div>
           </div>
         ) : (
-          <canvas
-            ref={resultCanvasRef}
-            className="max-w-full shadow-lg"
-            style={{ imageRendering: zoom === '100' ? 'pixelated' : 'auto' }}
-            aria-label={`Preview of ${image.name}`}
-          />
+          <figure className="flex flex-col items-center mat-fade">
+            <div className="relative bg-paper-50 dark:bg-darkroom-100 p-3 md:p-4 shadow-print dark:shadow-print-dark">
+              <canvas
+                ref={resultCanvasRef}
+                className="max-w-full block"
+                style={{ imageRendering: zoom === '100' ? 'pixelated' : 'auto' }}
+                aria-label={`Preview of ${image.name}`}
+              />
+            </div>
+            <figcaption className="mt-3 flex items-center gap-3 px-2 text-2xs font-mono uppercase tracking-[0.18em] text-ink-100 dark:text-darkroom-500 max-w-full">
+              <span className="truncate" title={image.name}>
+                {image.name}
+              </span>
+              <span className="w-1 h-1 rounded-full bg-paper-400 dark:bg-darkroom-400 flex-shrink-0" aria-hidden="true" />
+              <span className="flex-shrink-0">
+                {image.originalWidth} × {image.originalHeight}
+              </span>
+              {image.exifDate && (
+                <>
+                  <span className="w-1 h-1 rounded-full bg-paper-400 dark:bg-darkroom-400 flex-shrink-0" aria-hidden="true" />
+                  <span className="flex-shrink-0">
+                    {image.exifDate.toISOString().slice(0, 10)}
+                  </span>
+                </>
+              )}
+            </figcaption>
+          </figure>
         )}
       </div>
 
-      <div className="flex items-center justify-between px-4 py-3 border-t bg-surface-light dark:bg-surface-dark">
+      <div className="flex items-center justify-between px-4 py-3 border-t bg-paper-50/80 dark:bg-darkroom-100/80 backdrop-blur-sm">
         <div className="flex items-center gap-2" role="group" aria-label="Preview mode">
           <div className="flex rounded-lg overflow-hidden border">
             {PREVIEW_MODES.map((mode) => (
@@ -463,9 +484,9 @@ export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBac
                 onClick={() => setPreviewMode(mode.value)}
                 className={`
                   px-3 py-1.5 text-xs font-medium transition-colors min-h-[36px]
-                  focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:z-10
+                  focus:outline-none focus-visible:ring-2 focus-visible:ring-safelight-500 focus-visible:z-10
                   ${previewMode === mode.value
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-ink-900 text-paper-50 dark:bg-paper-50 dark:text-ink-900'
                     : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
                   }
                 `}
@@ -480,7 +501,7 @@ export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBac
             <button
               type="button"
               onClick={() => setSwapped(!swapped)}
-              className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-safelight-500"
               aria-label="Swap original and result"
               title="Swap original and result"
             >
@@ -504,9 +525,9 @@ export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBac
                 onClick={() => setZoom(level)}
                 className={`
                   px-3 py-1.5 text-xs font-medium transition-colors min-h-[36px]
-                  focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:z-10
+                  focus:outline-none focus-visible:ring-2 focus-visible:ring-safelight-500 focus-visible:z-10
                   ${zoom === level
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-ink-900 text-paper-50 dark:bg-paper-50 dark:text-ink-900'
                     : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
                   }
                 `}
@@ -523,7 +544,7 @@ export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBac
             disabled={isCopying || previewMode === 'slider' || previewMode === 'side-by-side'}
             title="Copy result to clipboard"
             aria-label="Copy result image to clipboard"
-            className="p-2 min-w-[36px] min-h-[36px] rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            className="p-2 min-w-[36px] min-h-[36px] rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-safelight-500"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />

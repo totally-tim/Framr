@@ -177,7 +177,7 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
             <label className="text-sm text-gray-600 dark:text-gray-300">Enable</label>
             <button
               onClick={() => onChange({ ...textOverlay, enabled: !textOverlay.enabled })}
-              className={`relative w-11 h-6 rounded-full transition-colors ${textOverlay.enabled ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+              className={`relative w-11 h-6 rounded-full transition-colors ${textOverlay.enabled ? 'bg-ink-900 dark:bg-paper-50' : 'bg-gray-300 dark:bg-gray-600'}`}
             >
               <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${textOverlay.enabled ? 'translate-x-5' : ''}`} />
             </button>
@@ -192,7 +192,7 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
                   type="text"
                   value={textOverlay.text}
                   onChange={(e) => onChange({ ...textOverlay, text: e.target.value })}
-                  className="w-full px-3 py-2 text-sm rounded border bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 text-sm rounded border bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-safelight-500"
                   placeholder="Your text here..."
                 />
               </div>
@@ -228,7 +228,7 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
                     <select
                       value={textOverlay.dateStampFormat}
                       onChange={(e) => handleDateFormatChange(e.target.value as DateStampFormat)}
-                      className="w-full px-3 py-1.5 text-sm rounded border bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-1.5 text-sm rounded border bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-safelight-500"
                     >
                       {DATE_STAMP_FORMATS.map((f) => (
                         <option key={f.value} value={f.value}>
@@ -263,7 +263,7 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
                       onClick={() => setFontCategory(cat.value)}
                       className={`flex-1 py-1 text-[10px] font-medium transition-colors ${
                         fontCategory === cat.value
-                          ? 'bg-blue-500 text-white'
+                          ? 'bg-ink-900 text-paper-50 dark:bg-paper-50 dark:text-ink-900'
                           : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                       }`}
                     >
@@ -343,10 +343,10 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
                           }
                           onChange({ ...textOverlay, fontWeight: w.weight });
                         }}
-                        className={`px-2 py-1 text-xs rounded border transition-colors ${
+                        className={`px-2 py-1 text-xs rounded-sm border transition-colors ${
                           textOverlay.fontWeight === w.weight
-                            ? 'bg-blue-500 text-white border-blue-500'
-                            : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
+                            ? 'bg-ink-900 dark:bg-paper-50 text-paper-50 dark:text-ink-900 border-ink-900 dark:border-paper-50'
+                            : 'bg-paper-50 dark:bg-darkroom-200 text-ink-600 dark:text-paper-100 border-paper-300 dark:border-darkroom-400 hover:bg-paper-100 dark:hover:bg-darkroom-300'
                         } disabled:opacity-60 disabled:cursor-default`}
                       >
                         {w.label}
@@ -366,7 +366,7 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
                       onClick={() => onChange({ ...textOverlay, position: cell.value })}
                       className={`w-10 h-8 text-[10px] font-medium rounded transition-colors ${
                         textOverlay.position === cell.value
-                          ? 'bg-blue-500 text-white'
+                          ? 'bg-ink-900 text-paper-50 dark:bg-paper-50 dark:text-ink-900'
                           : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                       }`}
                     >
@@ -399,7 +399,7 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
                   <label className="text-xs text-gray-500 dark:text-gray-400">Auto Contrast Color</label>
                   <button
                     onClick={() => onChange({ ...textOverlay, useAutoColor: !textOverlay.useAutoColor })}
-                    className={`relative w-9 h-5 rounded-full transition-colors ${textOverlay.useAutoColor ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                    className={`relative w-9 h-5 rounded-full transition-colors ${textOverlay.useAutoColor ? 'bg-ink-900 dark:bg-paper-50' : 'bg-gray-300 dark:bg-gray-600'}`}
                   >
                     <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${textOverlay.useAutoColor ? 'translate-x-4' : ''}`} />
                   </button>
@@ -418,7 +418,7 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
                           }}
                           className={`w-6 h-6 rounded-full border-2 transition-all ${
                             textOverlay.color === preset.value
-                              ? 'ring-2 ring-blue-500 ring-offset-1 dark:ring-offset-gray-900'
+                              ? 'ring-2 ring-ink-900 dark:ring-paper-50 ring-offset-1 dark:ring-offset-darkroom-100'
                               : 'hover:scale-110'
                           } ${preset.value === '#FFFFFF' ? 'border-gray-300' : 'border-transparent'}`}
                           style={{ backgroundColor: preset.value }}
@@ -457,7 +457,7 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
                             setOverlayColorInput(textOverlay.color);
                           }
                         }}
-                        className="flex-1 px-3 py-2 text-sm rounded border bg-white dark:bg-gray-800 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="flex-1 px-3 py-2 text-sm rounded border bg-white dark:bg-gray-800 font-mono focus:outline-none focus:ring-2 focus:ring-safelight-500"
                         placeholder="#000000"
                       />
                     </div>
@@ -474,14 +474,14 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
                       ...textOverlay,
                       textShadow: { ...textOverlay.textShadow, enabled: !textOverlay.textShadow.enabled },
                     })}
-                    className={`relative w-9 h-5 rounded-full transition-colors ${textOverlay.textShadow.enabled ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                    className={`relative w-9 h-5 rounded-full transition-colors ${textOverlay.textShadow.enabled ? 'bg-ink-900 dark:bg-paper-50' : 'bg-gray-300 dark:bg-gray-600'}`}
                   >
                     <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${textOverlay.textShadow.enabled ? 'translate-x-4' : ''}`} />
                   </button>
                 </div>
 
                 {textOverlay.textShadow.enabled && (
-                  <div className="space-y-2 pl-2 border-l-2 border-blue-200 dark:border-blue-800">
+                  <div className="space-y-2 pl-2 border-l-2 border-safelight-500/40">
                     <div className="flex items-center justify-between">
                       <label className="text-xs text-gray-500 dark:text-gray-400">Auto Color</label>
                       <button
@@ -489,7 +489,7 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
                           ...textOverlay,
                           textShadow: { ...textOverlay.textShadow, useAutoColor: !textOverlay.textShadow.useAutoColor },
                         })}
-                        className={`relative w-9 h-5 rounded-full transition-colors ${textOverlay.textShadow.useAutoColor ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                        className={`relative w-9 h-5 rounded-full transition-colors ${textOverlay.textShadow.useAutoColor ? 'bg-ink-900 dark:bg-paper-50' : 'bg-gray-300 dark:bg-gray-600'}`}
                       >
                         <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${textOverlay.textShadow.useAutoColor ? 'translate-x-4' : ''}`} />
                       </button>
@@ -533,7 +533,7 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
                               setShadowColorInput(textOverlay.textShadow.color);
                             }
                           }}
-                          className="flex-1 px-2 py-1.5 text-sm rounded border bg-white dark:bg-gray-800 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="flex-1 px-2 py-1.5 text-sm rounded border bg-white dark:bg-gray-800 font-mono focus:outline-none focus:ring-2 focus:ring-safelight-500"
                           placeholder="#000000"
                         />
                       </div>
@@ -613,7 +613,7 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
                       onClick={() => onChange({ ...textOverlay, textEffect: opt.value })}
                       className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
                         textOverlay.textEffect === opt.value
-                          ? 'bg-blue-500 text-white'
+                          ? 'bg-ink-900 text-paper-50 dark:bg-paper-50 dark:text-ink-900'
                           : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                       }`}
                     >
@@ -680,7 +680,7 @@ function FontOption({ font, isSelected, onSelect }: {
       onClick={() => onSelect(font)}
       className={`w-full text-left px-2 py-1.5 text-sm transition-colors ${
         isSelected
-          ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+          ? 'bg-safelight-50 dark:bg-safelight-700/10 text-safelight-700 dark:text-safelight-300'
           : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'
       }`}
       style={fontStyle}
