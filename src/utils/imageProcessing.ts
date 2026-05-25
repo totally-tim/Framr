@@ -2,7 +2,7 @@ import type { AspectRatio, BorderSettings, ResizeSettings, OutputSettings } from
 
 export function getFileExtension(filename: string): string {
   const match = filename.match(/\.([^.]+)$/);
-  return match ? match[1].toLowerCase() : 'jpg';
+  return match ? match[1].toLowerCase() : '';
 }
 
 export function getMimeType(format: string): string {
@@ -15,6 +15,37 @@ export function getMimeType(format: string): string {
     tif: 'image/tiff',
   };
   return types[format.toLowerCase()] || 'image/jpeg';
+}
+
+/**
+ * Browsers cannot encode `image/tiff` via canvas.convertToBlob. Detect that case
+ * and return a safe fallback so we don't ship a "PNG renamed to .tiff" file.
+ */
+export function resolveEncodableMime(requestedMime: string): { mime: string; downgradedFrom?: string } {
+  if (requestedMime === 'image/tiff') {
+    return { mime: 'image/png', downgradedFrom: 'image/tiff' };
+  }
+  return { mime: requestedMime };
+}
+
+export function mimeToExtension(mime: string): string {
+  switch (mime) {
+    case 'image/jpeg': return 'jpg';
+    case 'image/png': return 'png';
+    case 'image/webp': return 'webp';
+    case 'image/tiff': return 'tiff';
+    default: return 'bin';
+  }
+}
+
+/**
+ * Strip path separators, null bytes, and leading dots that an attacker could
+ * smuggle into a ZIP entry name to escape the extraction directory.
+ */
+export function sanitizeOutputBasename(name: string): string {
+  return name
+    .replace(/[/\\\0]/g, '_')
+    .replace(/^\.+/, '');
 }
 
 export function getExtensionFromMime(mimeType: string): string {
@@ -44,14 +75,16 @@ export function calculateBorderSize(
   }
 
   if (aspectAware) {
+    // "Aspect-aware" pads the SHORT axis more so the framed result looks more balanced —
+    // a landscape gets thicker top/bottom borders, a portrait gets thicker left/right borders.
     const aspectRatio = imageWidth / imageHeight;
     if (aspectRatio > 1) {
-      const verticalBorder = borderSize;
-      const horizontalBorder = Math.round(borderSize * aspectRatio);
+      const horizontalBorder = borderSize;
+      const verticalBorder = Math.round(borderSize * aspectRatio);
       return { top: verticalBorder, right: horizontalBorder, bottom: verticalBorder, left: horizontalBorder };
     } else if (aspectRatio < 1) {
-      const horizontalBorder = borderSize;
-      const verticalBorder = Math.round(borderSize / aspectRatio);
+      const verticalBorder = borderSize;
+      const horizontalBorder = Math.round(borderSize / aspectRatio);
       return { top: verticalBorder, right: horizontalBorder, bottom: verticalBorder, left: horizontalBorder };
     }
   }
@@ -131,14 +164,19 @@ export function calculateOutputDimensions(
 
 export function generateOutputFilename(
   originalName: string,
-  outputFormat: string | OutputSettings
+  outputFormat: string | OutputSettings,
 ): string {
-  const baseName = originalName.replace(/\.[^.]+$/, '');
+  const sanitized = sanitizeOutputBasename(originalName);
+  const baseName = sanitized.replace(/\.[^.]+$/, '') || 'image';
   const format = typeof outputFormat === 'string' ? outputFormat : outputFormat.format;
   let extension: string;
 
   if (format === 'original') {
-    extension = getFileExtension(originalName);
+    extension = getFileExtension(sanitized) || 'jpg';
+    // TIFF outputs are silently re-encoded as PNG by the worker; reflect that here.
+    if (extension === 'tiff' || extension === 'tif') {
+      extension = 'png';
+    }
   } else {
     extension = format === 'jpeg' ? 'jpg' : format;
   }

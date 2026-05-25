@@ -1,28 +1,33 @@
-import { saveAs } from 'file-saver';
-import JSZip from 'jszip';
 import type { ProcessingResult } from '../types';
+import { sanitizeOutputBasename } from './imageProcessing';
 
-export function downloadSingle(blob: Blob, filename: string): void {
-  saveAs(blob, filename);
+export async function downloadSingle(blob: Blob, filename: string): Promise<void> {
+  const { saveAs } = await import('file-saver');
+  saveAs(blob, sanitizeOutputBasename(filename));
 }
 
 export async function downloadAsZip(
   results: ProcessingResult[],
   zipFilename: string = 'framr-export.zip',
-  onProgress?: (progress: number) => void
+  onProgress?: (progress: number) => void,
 ): Promise<void> {
-  const zip = new JSZip();
+  const [{ default: JSZip }, { saveAs }] = await Promise.all([
+    import('jszip'),
+    import('file-saver'),
+  ]);
 
+  const zip = new JSZip();
   const usedNames = new Set<string>();
 
   for (const result of results) {
-    let filename = result.filename;
+    const safeBase = sanitizeOutputBasename(result.filename);
+    let filename = safeBase;
     let counter = 1;
 
     while (usedNames.has(filename)) {
-      const baseName = result.filename.replace(/(\.[^.]+)$/, '');
-      const extension = result.filename.match(/\.[^.]+$/)?.[0] || '';
-      filename = `${baseName}_${counter}${extension}`;
+      const stem = safeBase.replace(/(\.[^.]+)$/, '');
+      const extension = safeBase.match(/\.[^.]+$/)?.[0] || '';
+      filename = `${stem}_${counter}${extension}`;
       counter++;
     }
 
@@ -33,10 +38,8 @@ export async function downloadAsZip(
   const content = await zip.generateAsync(
     { type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } },
     (metadata) => {
-      if (onProgress) {
-        onProgress(metadata.percent);
-      }
-    }
+      if (onProgress) onProgress(metadata.percent);
+    },
   );
 
   saveAs(content, zipFilename);

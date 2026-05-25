@@ -5,6 +5,7 @@ interface KeyboardShortcutsOptions {
   onRemoveSelected: () => void;
   onNavigate: (direction: 'up' | 'down') => void;
   onDeselect: () => void;
+  onShowHelp?: () => void;
   hasImages: boolean;
   selectedId: string | null;
   isProcessing: boolean;
@@ -22,6 +23,7 @@ export function useKeyboardShortcuts({
   onRemoveSelected,
   onNavigate,
   onDeselect,
+  onShowHelp,
   hasImages,
   selectedId,
   isProcessing,
@@ -29,6 +31,14 @@ export function useKeyboardShortcuts({
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (isInputFocused()) return;
+
+      // `?` is reachable globally — even with no images loaded.
+      if ((e.key === '?' || (e.key === '/' && e.shiftKey)) && onShowHelp) {
+        e.preventDefault();
+        onShowHelp();
+        return;
+      }
+
       if (!hasImages) return;
 
       const isModifier = e.metaKey || e.ctrlKey;
@@ -40,6 +50,7 @@ export function useKeyboardShortcuts({
       }
 
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) {
+        if (e.repeat) return; // avoid mass-deletion on key hold
         e.preventDefault();
         onRemoveSelected();
         return;
@@ -66,5 +77,5 @@ export function useKeyboardShortcuts({
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [onProcess, onRemoveSelected, onNavigate, onDeselect, hasImages, selectedId, isProcessing]);
+  }, [onProcess, onRemoveSelected, onNavigate, onDeselect, onShowHelp, hasImages, selectedId, isProcessing]);
 }

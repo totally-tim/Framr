@@ -1,6 +1,6 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import type { AspectRatio, ImageFile, BorderSettings, ResizeSettings, OutputSettings, ProcessingResult, CanvasBackground, Toast, ToastVariant, TextOverlaySettings } from '../types';
-import { createImageFile, checkMemoryWarning, cleanupImageResources } from '../utils/imageUtils';
+import { createImageFile, checkMemoryWarning, cleanupImageResources, generateId, ImageLoadError } from '../utils/imageUtils';
 import { DEFAULT_BORDER_SETTINGS } from '../utils/constants';
 import { extractExifDate } from '../utils/exif';
 import { useTheme } from '../hooks/useTheme';
@@ -57,6 +57,8 @@ const DEFAULT_TEXT_OVERLAY: TextOverlaySettings = {
   effectIntensity: 0.5,
 };
 
+const MAX_TOASTS = 5;
+
 export default function App() {
   const { theme, toggleTheme } = useTheme();
   const [images, setImages] = useState<ImageFile[]>([]);
@@ -71,11 +73,16 @@ export default function App() {
   const [memoryWarning, setMemoryWarning] = useState(false);
   const [isImagesDrawerOpen, setIsImagesDrawerOpen] = useState(false);
   const [isControlsDrawerOpen, setIsControlsDrawerOpen] = useState(false);
+  const [isShortcutsHelpOpen, setIsShortcutsHelpOpen] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const addToast = useCallback((message: string, variant: ToastVariant = 'info') => {
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    setToasts((prev) => [...prev, { id, variant, message }]);
+    const id = generateId();
+    setToasts((prev) => {
+      const next = [...prev, { id, variant, message }];
+      // Keep the queue bounded so an error storm doesn't bury the UI.
+      return next.length > MAX_TOASTS ? next.slice(-MAX_TOASTS) : next;
+    });
   }, []);
 
   const removeToast = useCallback((id: string) => {
@@ -95,19 +102,31 @@ export default function App() {
     resetState,
   } = useImageProcessor();
 
+  // Mirror images into a ref so async work can see the latest list without re-running.
+  const imagesRef = useRef<ImageFile[]>(images);
+  useEffect(() => { imagesRef.current = images; }, [images]);
+
   const handleFilesSelected = useCallback(async (files: File[]) => {
     const newImages: ImageFile[] = [];
+    const failures: { name: string; reason: string }[] = [];
 
     for (const file of files) {
       try {
         const imageFile = await createImageFile(file);
-        const exifDate = await extractExifDate(file);
-        if (exifDate) {
-          imageFile.exifDate = exifDate;
+        try {
+          const exifDate = await extractExifDate(file);
+          if (exifDate) imageFile.exifDate = exifDate;
+        } catch (exifErr) {
+          // EXIF is non-essential — log but don't fail the import.
+          console.warn(`Framr: EXIF extraction failed for "${file.name}"`, exifErr);
         }
         newImages.push(imageFile);
       } catch (error) {
-        console.error('Failed to load image:', file.name, error);
+        const reason = error instanceof ImageLoadError
+          ? `couldn't decode (${file.type || 'unknown type'})`
+          : error instanceof Error ? error.message : 'unknown error';
+        console.error(`Framr: failed to load "${file.name}"`, error);
+        failures.push({ name: file.name, reason });
       }
     }
 
@@ -117,23 +136,26 @@ export default function App() {
         setMemoryWarning(checkMemoryWarning(updated));
         return updated;
       });
-
-      // Use functional update to avoid dependency on selectedId
       setSelectedId((prev) => prev ?? newImages[0].id);
     }
-  }, []);
+
+    if (failures.length === 1) {
+      addToast(`Couldn't load "${failures[0].name}" — ${failures[0].reason}`, 'error');
+    } else if (failures.length > 1) {
+      const names = failures.slice(0, 3).map((f) => f.name).join(', ');
+      const more = failures.length > 3 ? ` and ${failures.length - 3} more` : '';
+      addToast(`${failures.length} files failed to load: ${names}${more}`, 'error');
+    }
+  }, [addToast]);
 
   const handleRemoveImage = useCallback((id: string) => {
-    // Capture references before state updates for cleanup after
     let removedImage: ImageFile | undefined;
-    let removedResult: ProcessingResult | undefined;
 
     setImages((prev) => {
       removedImage = prev.find((img) => img.id === id);
       const updated = prev.filter((img) => img.id !== id);
       setMemoryWarning(checkMemoryWarning(updated));
 
-      // Update selectedId from within setImages to access latest list
       setSelectedId((prevSelected) => {
         if (prevSelected !== id) return prevSelected;
         return updated.length > 0 ? updated[0].id : null;
@@ -142,18 +164,17 @@ export default function App() {
       return updated;
     });
 
-    setResults((prev) => {
-      removedResult = prev.find((r) => r.imageId === id);
-      return prev.filter((r) => r.imageId !== id);
-    });
+    setResults((prev) => prev.filter((r) => r.imageId !== id));
 
-    // Clean up resources after state updates (no mutation inside setters)
     if (removedImage) {
       cleanupImageResources(removedImage);
     }
-    if (removedResult) {
-      (removedResult as { blob?: Blob }).blob = undefined;
-    }
+  }, []);
+
+  const handleRetryImage = useCallback((id: string) => {
+    setImages((prev) =>
+      prev.map((img) => img.id === id ? { ...img, status: 'pending', error: undefined } : img),
+    );
   }, []);
 
   const handleReorderImages = useCallback((fromIndex: number, toIndex: number) => {
@@ -166,23 +187,18 @@ export default function App() {
   }, []);
 
   const handleClearAll = useCallback(() => {
-    // Capture references before clearing state
-    const imagesToCleanup = images;
-    const resultsToCleanup = results;
+    // Cancel any in-flight work first so worker callbacks can't re-populate the lists we're about to wipe.
+    cancelProcessing();
 
-    // Clear state first (no mutations inside setters)
-    setImages([]);
+    setImages((prev) => {
+      prev.forEach(cleanupImageResources);
+      return [];
+    });
     setResults([]);
     setSelectedId(null);
     setMemoryWarning(false);
     resetState();
-
-    // Clean up resources after state updates
-    imagesToCleanup.forEach(cleanupImageResources);
-    resultsToCleanup.forEach((result) => {
-      (result as { blob?: Blob }).blob = undefined;
-    });
-  }, [images, results, resetState]);
+  }, [cancelProcessing, resetState]);
 
   const handleAddMore = useCallback(() => {
     fileInputRef.current?.click();
@@ -194,8 +210,8 @@ export default function App() {
 
     setImages((prev) =>
       prev.map((img) =>
-        img.status === 'pending' ? { ...img, status: 'processing' } : img
-      )
+        img.status === 'pending' ? { ...img, status: 'processing' } : img,
+      ),
     );
 
     const config = {
@@ -206,42 +222,58 @@ export default function App() {
       textOverlay: textOverlay.enabled ? textOverlay : undefined,
     };
 
-    let doneCount = 0;
-    let errorCount = 0;
+    const completedNames: string[] = [];
+    const failures: { name: string; reason: string }[] = [];
 
-    await processImages(
+    const { rejected } = await processImages(
       pendingImages,
       config,
       (imageId, result) => {
-        doneCount++;
+        // Drop orphan results — image may have been removed during processing.
+        if (!imagesRef.current.some((img) => img.id === imageId)) return;
+        const image = imagesRef.current.find((img) => img.id === imageId);
+        if (image) completedNames.push(image.name);
         setImages((prev) =>
           prev.map((img) =>
-            img.id === imageId ? { ...img, status: 'done', processedBlob: result.blob } : img
-          )
+            img.id === imageId ? { ...img, status: 'done', processedBlob: result.blob } : img,
+          ),
         );
         setResults((prev) => [...prev, result]);
       },
       (imageId, error) => {
-        errorCount++;
+        if (!imagesRef.current.some((img) => img.id === imageId)) return;
+        const image = imagesRef.current.find((img) => img.id === imageId);
+        if (image) failures.push({ name: image.name, reason: error });
         setImages((prev) =>
           prev.map((img) =>
-            img.id === imageId ? { ...img, status: 'error', error } : img
-          )
+            img.id === imageId ? { ...img, status: 'error', error } : img,
+          ),
         );
-      }
+      },
+      (warning) => addToast(warning, 'warning'),
     );
 
-    if (doneCount > 0) {
+    if (rejected === 'busy') {
+      // Roll back the optimistic status change since we never actually started.
+      setImages((prev) =>
+        prev.map((img) =>
+          img.status === 'processing' ? { ...img, status: 'pending' } : img,
+        ),
+      );
+      addToast('Already processing — wait for the current batch to finish.', 'warning');
+      return;
+    }
+
+    if (completedNames.length > 0) {
       addToast(
-        `${doneCount} image${doneCount !== 1 ? 's' : ''} processed successfully`,
-        'success'
+        `${completedNames.length} image${completedNames.length !== 1 ? 's' : ''} processed.`,
+        'success',
       );
     }
-    if (errorCount > 0) {
-      addToast(
-        `${errorCount} image${errorCount !== 1 ? 's' : ''} failed to process`,
-        'error'
-      );
+    if (failures.length > 0) {
+      const names = failures.slice(0, 2).map((f) => `"${f.name}"`).join(', ');
+      const more = failures.length > 2 ? ` and ${failures.length - 2} more` : '';
+      addToast(`Failed: ${names}${more} — ${failures[0].reason}`, 'error');
     }
   }, [images, borderSettings, resizeSettings, outputSettings, targetAspectRatio, textOverlay, processImages, addToast]);
 
@@ -249,8 +281,8 @@ export default function App() {
     cancelProcessing();
     setImages((prev) =>
       prev.map((img) =>
-        img.status === 'processing' ? { ...img, status: 'pending' } : img
-      )
+        img.status === 'processing' ? { ...img, status: 'pending' } : img,
+      ),
     );
   }, [cancelProcessing]);
 
@@ -258,21 +290,24 @@ export default function App() {
 
   const handleNavigate = useCallback((direction: 'up' | 'down') => {
     if (images.length === 0) return;
-    const currentIndex = images.findIndex((img) => img.id === selectedId);
+    const currentIdx = images.findIndex((img) => img.id === selectedId);
     if (direction === 'up') {
-      const newIndex = currentIndex <= 0 ? images.length - 1 : currentIndex - 1;
+      const newIndex = currentIdx <= 0 ? images.length - 1 : currentIdx - 1;
       setSelectedId(images[newIndex].id);
     } else {
-      const newIndex = currentIndex >= images.length - 1 ? 0 : currentIndex + 1;
+      const newIndex = currentIdx >= images.length - 1 ? 0 : currentIdx + 1;
       setSelectedId(images[newIndex].id);
     }
   }, [images, selectedId]);
+
+  const handleShowShortcuts = useCallback(() => setIsShortcutsHelpOpen(true), []);
 
   useKeyboardShortcuts({
     onProcess: handleProcess,
     onRemoveSelected: () => { if (selectedId) handleRemoveImage(selectedId); },
     onNavigate: handleNavigate,
     onDeselect: () => setSelectedId(null),
+    onShowHelp: handleShowShortcuts,
     hasImages,
     selectedId,
     isProcessing,
@@ -282,6 +317,10 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-50 focus:px-3 focus:py-2 focus:bg-gray-900 focus:text-white focus:rounded">
+        Skip to main content
+      </a>
+
       <input
         ref={fileInputRef}
         type="file"
@@ -293,7 +332,8 @@ export default function App() {
           }
           e.target.value = '';
         }}
-        className="hidden"
+        className="sr-only"
+        aria-label="Add images"
       />
 
       <header className="flex items-center justify-between px-4 md:px-6 py-3 border-b bg-surface-light dark:bg-surface-dark">
@@ -304,23 +344,26 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-2">
-          <KeyboardShortcutsHelp />
+          <KeyboardShortcutsHelp
+            isOpen={isShortcutsHelpOpen}
+            onOpenChange={setIsShortcutsHelpOpen}
+          />
           <ThemeToggle theme={theme} onToggle={toggleTheme} />
           <a
             href="https://github.com/totally-tim/framr"
             target="_blank"
             rel="noopener noreferrer"
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
             aria-label="View on GitHub"
           >
-            <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
             </svg>
           </a>
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col md:flex-row overflow-hidden">
+      <main id="main" className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {!hasImages ? (
           <div className="flex-1 flex items-center justify-center p-4 md:p-8">
             <div className="w-full max-w-2xl">
@@ -329,8 +372,10 @@ export default function App() {
           </div>
         ) : (
           <>
-            {/* Desktop sidebar - hidden on mobile */}
-            <aside className="hidden md:flex w-72 xl:w-80 border-r bg-surface-light dark:bg-surface-dark flex-col overflow-hidden">
+            <aside
+              className="hidden md:flex w-72 xl:w-80 border-r bg-surface-light dark:bg-surface-dark flex-col overflow-hidden"
+              aria-label="Images and controls"
+            >
               <div className="p-3 border-b">
                 <DropZone onFilesSelected={handleFilesSelected} hasImages={true} />
               </div>
@@ -340,6 +385,7 @@ export default function App() {
                   selectedId={selectedId}
                   onSelect={setSelectedId}
                   onRemove={handleRemoveImage}
+                  onRetry={handleRetryImage}
                   onAddMore={handleAddMore}
                   onClearAll={handleClearAll}
                   onReorderImages={handleReorderImages}
@@ -378,7 +424,6 @@ export default function App() {
               </div>
             </aside>
 
-            {/* Main preview area */}
             <div className="flex-1 flex flex-col overflow-hidden pb-16 md:pb-0">
               <div className="flex-1 overflow-hidden">
                 <PreviewCanvas
@@ -392,7 +437,6 @@ export default function App() {
                 />
               </div>
 
-              {/* Desktop presets - hidden on mobile */}
               <div className="hidden md:block p-4 border-t bg-surface-light dark:bg-surface-dark">
                 <PresetButtons
                   currentBorder={borderSettings}
@@ -408,13 +452,15 @@ export default function App() {
               </div>
 
               {memoryWarning && (
-                <div className="px-4 py-2 bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 text-sm border-t border-amber-200 dark:border-amber-800">
+                <div
+                  className="px-4 py-2 bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 text-sm border-t border-amber-200 dark:border-amber-800"
+                  role="status"
+                >
                   Memory warning: Processing many large images may cause slowdowns. Consider processing in smaller batches.
                 </div>
               )}
             </div>
 
-            {/* Mobile action bar */}
             {hasImages && (
               <MobileActionBar
                 images={images}
@@ -428,7 +474,6 @@ export default function App() {
               />
             )}
 
-            {/* Mobile Images Drawer */}
             <MobileDrawer
               isOpen={isImagesDrawerOpen}
               onClose={() => setIsImagesDrawerOpen(false)}
@@ -443,6 +488,7 @@ export default function App() {
                     setIsImagesDrawerOpen(false);
                   }}
                   onRemove={handleRemoveImage}
+                  onRetry={handleRetryImage}
                   onAddMore={handleAddMore}
                   onClearAll={handleClearAll}
                   onReorderImages={handleReorderImages}
@@ -450,7 +496,6 @@ export default function App() {
               </div>
             </MobileDrawer>
 
-            {/* Mobile Controls Drawer */}
             <MobileDrawer
               isOpen={isControlsDrawerOpen}
               onClose={() => setIsControlsDrawerOpen(false)}
@@ -508,7 +553,7 @@ export default function App() {
       <ToastContainer toasts={toasts} onRemove={removeToast} />
 
       <footer className="hidden md:block py-2 px-4 border-t text-center text-xs text-gray-500 dark:text-gray-400 bg-surface-light dark:bg-surface-dark">
-        Framr - Add borders to your images. All processing happens in your browser.
+        Framr — Add borders to your images. All processing happens on your device.
       </footer>
     </div>
   );

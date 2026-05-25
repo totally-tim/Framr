@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { ImageFile, ProcessingConfig, ProcessingResult } from '../types';
-import { loadImage } from '../utils/imageUtils';
 import { fetchFontData, isGenericFont } from '../utils/fonts';
 
 interface ProcessingState {
@@ -11,6 +10,23 @@ interface ProcessingState {
   currentImageName: string;
   results: ProcessingResult[];
   cancelled: boolean;
+}
+
+export type ProcessRejectionReason = 'busy' | 'no-worker' | 'no-images';
+
+const IMAGE_TIMEOUT_MS = 90_000;
+
+interface PendingHandler {
+  reject: (err: Error) => void;
+  cleanup: () => void;
+  batchId: string;
+}
+
+function createWorker(): Worker {
+  return new Worker(
+    new URL('../workers/imageProcessor.worker.ts', import.meta.url),
+    { type: 'module' },
+  );
 }
 
 export function useImageProcessor() {
@@ -27,36 +43,66 @@ export function useImageProcessor() {
   const workerRef = useRef<Worker | null>(null);
   const cancelledRef = useRef(false);
   const isProcessingRef = useRef(false);
+  const currentBatchIdRef = useRef<string>('');
+  const pendingHandlersRef = useRef<Set<PendingHandler>>(new Set());
+  const fontFallbackToastRef = useRef<((msg: string) => void) | null>(null);
+
+  // Recreate the worker lazily so a StrictMode teardown doesn't leave us with a terminated worker.
+  const ensureWorker = useCallback((): Worker => {
+    if (!workerRef.current) {
+      const worker = createWorker();
+      worker.onerror = (event) => {
+        console.error('Framr: worker error', event.message, event);
+        const pending = Array.from(pendingHandlersRef.current);
+        for (const handler of pending) {
+          handler.reject(new Error(`Worker crashed: ${event.message || 'unknown error'}`));
+        }
+        // Force a fresh worker on next call.
+        workerRef.current?.terminate();
+        workerRef.current = null;
+      };
+      worker.onmessageerror = (event) => {
+        console.error('Framr: worker messageerror (structured-clone failed)', event);
+      };
+      workerRef.current = worker;
+    }
+    return workerRef.current;
+  }, []);
 
   useEffect(() => {
-    const worker = new Worker(
-      new URL('../workers/imageProcessor.worker.ts', import.meta.url),
-      { type: 'module' }
-    );
-    workerRef.current = worker;
-
+    ensureWorker();
+    const pendingSet = pendingHandlersRef.current;
     return () => {
-      worker.terminate();
+      workerRef.current?.terminate();
+      workerRef.current = null;
+      pendingSet.clear();
     };
-  }, []);
+  }, [ensureWorker]);
 
   const processImages = useCallback(
     async (
       images: ImageFile[],
       config: ProcessingConfig,
       onImageComplete?: (imageId: string, result: ProcessingResult) => void,
-      onImageError?: (imageId: string, error: string) => void
-    ): Promise<ProcessingResult[]> => {
-      if (!workerRef.current || images.length === 0) {
-        return [];
+      onImageError?: (imageId: string, error: string) => void,
+      onWarning?: (message: string) => void,
+    ): Promise<{ results: ProcessingResult[]; rejected?: ProcessRejectionReason }> => {
+      if (images.length === 0) {
+        return { results: [], rejected: 'no-images' };
+      }
+      if (isProcessingRef.current) {
+        return { results: [], rejected: 'busy' };
       }
 
-      if (isProcessingRef.current) {
-        return [];
-      }
+      const worker = ensureWorker();
+      const batchId = (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+        ? crypto.randomUUID()
+        : `batch-${Date.now()}-${Math.random()}`;
 
       isProcessingRef.current = true;
       cancelledRef.current = false;
+      currentBatchIdRef.current = batchId;
+      fontFallbackToastRef.current = onWarning ?? null;
 
       setState({
         isProcessing: true,
@@ -70,9 +116,10 @@ export function useImageProcessor() {
 
       const results: ProcessingResult[] = [];
 
-      // Pre-fetch font data once for the entire batch (main thread, reliable)
+      // Pre-fetch font data once for the entire batch.
       let fontData: ArrayBuffer | null = null;
       if (
+        !cancelledRef.current &&
         config.textOverlay?.enabled &&
         config.textOverlay.fontFamily &&
         !isGenericFont(config.textOverlay.fontFamily)
@@ -81,13 +128,18 @@ export function useImageProcessor() {
           config.textOverlay.fontFamily,
           config.textOverlay.fontWeight || 400,
         );
+        if (!fontData && config.textOverlay.fontFamily !== 'sans-serif') {
+          onWarning?.(
+            `Couldn't load font "${config.textOverlay.fontFamily}" — falling back to system sans-serif.`,
+          );
+        }
       }
+
+      const reportedFontFallback = { current: false };
 
       try {
         for (let i = 0; i < images.length; i++) {
-          if (cancelledRef.current) {
-            break;
-          }
+          if (cancelledRef.current) break;
 
           const image = images[i];
 
@@ -99,24 +151,34 @@ export function useImageProcessor() {
           }));
 
           try {
-            const img = await loadImage(image.file);
-            const bitmap = await createImageBitmap(img);
+            const bitmap = await createImageBitmap(image.file);
 
             const result = await new Promise<ProcessingResult>((resolve, reject) => {
+              let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
               const handler = (event: MessageEvent) => {
                 const data = event.data;
-
+                if (data.batchId !== batchId) return;
                 if (data.imageId !== image.id) return;
 
                 if (data.type === 'result') {
-                  workerRef.current?.removeEventListener('message', handler);
+                  cleanup();
+                  if (data.fontFallback && !reportedFontFallback.current) {
+                    reportedFontFallback.current = true;
+                    onWarning?.(`Font fallback used (${data.fontFallback}); output may differ from preview.`);
+                  }
+                  if (data.outputDowngraded && data.outputDowngraded === 'tiff') {
+                    onWarning?.(
+                      `TIFF output isn't supported in this browser — saving "${image.name}" as PNG instead.`,
+                    );
+                  }
                   resolve({
                     imageId: data.imageId,
                     blob: data.blob,
                     filename: data.filename,
                   });
                 } else if (data.type === 'error') {
-                  workerRef.current?.removeEventListener('message', handler);
+                  cleanup();
                   reject(new Error(data.error));
                 } else if (data.type === 'progress') {
                   const imageProgress = data.progress;
@@ -125,34 +187,67 @@ export function useImageProcessor() {
                 }
               };
 
-              workerRef.current?.addEventListener('message', handler);
+              const pending: PendingHandler = {
+                reject,
+                cleanup: () => cleanup(),
+                batchId,
+              };
 
-              // Clone fontData for each image (transfer empties the buffer)
+              const cleanup = (): void => {
+                worker.removeEventListener('message', handler);
+                if (timeoutId) clearTimeout(timeoutId);
+                pendingHandlersRef.current.delete(pending);
+              };
+
+              pendingHandlersRef.current.add(pending);
+              worker.addEventListener('message', handler);
+
+              timeoutId = setTimeout(() => {
+                cleanup();
+                reject(new Error(`Processing timed out after ${IMAGE_TIMEOUT_MS / 1000}s`));
+              }, IMAGE_TIMEOUT_MS);
+
               const fontDataCopy = fontData ? fontData.slice(0) : undefined;
               const transferables: Transferable[] = [bitmap];
               if (fontDataCopy) transferables.push(fontDataCopy);
 
-              workerRef.current?.postMessage({
-                type: 'process',
-                imageBitmap: bitmap,
-                config,
-                originalFormat: image.name,
-                filename: image.name,
-                imageId: image.id,
-                fontData: fontDataCopy,
-              }, transferables);
+              try {
+                worker.postMessage({
+                  type: 'process',
+                  imageBitmap: bitmap,
+                  config,
+                  originalFormat: image.name,
+                  filename: image.name,
+                  imageId: image.id,
+                  batchId,
+                  fontData: fontDataCopy,
+                }, transferables);
+              } catch (postErr) {
+                cleanup();
+                // postMessage threw (structured clone failure) — the bitmap was not transferred.
+                try { bitmap.close(); } catch { /* ignore */ }
+                reject(postErr instanceof Error ? postErr : new Error(String(postErr)));
+              }
             });
+
+            if (cancelledRef.current || currentBatchIdRef.current !== batchId) {
+              // The user cancelled (or kicked off a new batch) while this image was in flight — drop the result.
+              break;
+            }
 
             results.push(result);
             onImageComplete?.(image.id, result);
 
           } catch (error) {
+            if (cancelledRef.current) break;
             const errorMessage = error instanceof Error ? error.message : 'Processing failed';
+            console.error(`Framr: failed to process "${image.name}"`, error);
             onImageError?.(image.id, errorMessage);
           }
         }
       } finally {
         isProcessingRef.current = false;
+        currentBatchIdRef.current = '';
         setState((prev) => ({
           ...prev,
           isProcessing: false,
@@ -161,14 +256,21 @@ export function useImageProcessor() {
         }));
       }
 
-      return results;
+      return { results };
     },
-    []
+    [ensureWorker],
   );
 
   const cancelProcessing = useCallback(() => {
     cancelledRef.current = true;
     setState((prev) => ({ ...prev, cancelled: true }));
+    // Drop any pending result-waiters so the loop exits promptly.
+    const pending = Array.from(pendingHandlersRef.current);
+    pendingHandlersRef.current.clear();
+    for (const handler of pending) {
+      handler.cleanup();
+      handler.reject(new Error('Cancelled'));
+    }
   }, []);
 
   const resetState = useCallback(() => {
