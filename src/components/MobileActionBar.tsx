@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { ImageFile } from '../types';
 
 interface MobileActionBarProps {
@@ -13,7 +14,7 @@ interface MobileActionBarProps {
   imageCount: number;
 }
 
-export function MobileActionBar({
+function MobileActionBarImpl({
   images,
   isProcessing,
   progress,
@@ -31,17 +32,23 @@ export function MobileActionBar({
 
   return (
     <div className="fixed bottom-0 left-0 right-0 md:hidden bg-white dark:bg-gray-900 border-t shadow-lg safe-bottom z-40">
-      {/* Progress bar when processing */}
       {isProcessing && (
-        <div>
-          <div className="h-1 bg-gray-200 dark:bg-gray-700">
+        <div aria-live="polite">
+          <div
+            className="h-1 bg-gray-200 dark:bg-gray-700"
+            role="progressbar"
+            aria-label="Processing progress"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(progress)}
+          >
             <div
-              className="h-full bg-blue-500 transition-all duration-300"
+              className="h-full bg-blue-600 transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
           </div>
           {totalCount > 0 && (
-            <div className="px-3 py-1 text-xs text-gray-500 dark:text-gray-400">
+            <div className="px-3 py-1 text-xs text-gray-600 dark:text-gray-300">
               Image {currentIndex + 1} of {totalCount}
             </div>
           )}
@@ -49,56 +56,58 @@ export function MobileActionBar({
       )}
 
       <div className="flex items-center gap-2 p-3">
-        {/* Images button */}
         <button
+          type="button"
           onClick={onOpenImages}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-          aria-label="View images"
+          className="flex items-center gap-2 px-3 py-2 min-h-[44px] rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          aria-label={`View images (${imageCount})`}
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
           <span className="text-sm font-medium">{imageCount}</span>
         </button>
 
-        {/* Controls button */}
         <button
+          type="button"
           onClick={onOpenControls}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-          aria-label="Open controls"
+          className="flex items-center gap-2 px-3 py-2 min-h-[44px] rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          aria-label="Open settings"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
           </svg>
           <span className="text-sm font-medium">Settings</span>
         </button>
 
-        {/* Process/Cancel button - takes remaining space */}
         <div className="flex-1">
           {isProcessing ? (
             <button
+              type="button"
               onClick={onCancel}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-red-500 hover:bg-red-600 text-white font-medium transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
+              aria-label="Cancel processing"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
               <span>Cancel</span>
             </button>
           ) : (
             <button
+              type="button"
               onClick={onProcess}
               disabled={!hasImages || pendingCount === 0}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-medium transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span>
                 {doneCount > 0 && pendingCount === 0
-                  ? 'All Done!'
-                  : `Process ${pendingCount > 0 ? `(${pendingCount})` : ''}`}
+                  ? 'All done'
+                  : `Process${pendingCount > 0 ? ` (${pendingCount})` : ''}`}
               </span>
             </button>
           )}
@@ -107,3 +116,5 @@ export function MobileActionBar({
     </div>
   );
 }
+
+export const MobileActionBar = memo(MobileActionBarImpl);

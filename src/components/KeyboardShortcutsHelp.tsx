@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform);
 const modKey = isMac ? '⌘' : 'Ctrl';
@@ -8,44 +8,83 @@ const SHORTCUTS = [
   { keys: ['↑', '↓'], description: 'Navigate image queue' },
   { keys: [isMac ? '⌫' : 'Del'], description: 'Remove selected image' },
   { keys: ['Esc'], description: 'Deselect image' },
+  { keys: ['?'], description: 'Show this dialog' },
 ];
 
-export function KeyboardShortcutsHelp() {
-  const [open, setOpen] = useState(false);
+interface KeyboardShortcutsHelpProps {
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
 
-  const close = useCallback(() => setOpen(false), []);
+export function KeyboardShortcutsHelp({ isOpen: controlledOpen, onOpenChange }: KeyboardShortcutsHelpProps = {}) {
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const closeBtnRef = useRef<HTMLButtonElement>(null);
+  const lastFocusedRef = useRef<HTMLElement | null>(null);
+
+  const open = controlledOpen ?? false;
+  const setOpen = (next: boolean) => onOpenChange?.(next);
 
   useEffect(() => {
     if (!open) return;
+    lastFocusedRef.current = document.activeElement as HTMLElement | null;
+    // Focus the close button on open so keyboard users land somewhere predictable.
+    queueMicrotask(() => closeBtnRef.current?.focus());
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation();
-        close();
+        setOpen(false);
       }
     };
-    // Use capture phase to intercept before global shortcuts
     document.addEventListener('keydown', handleKeyDown, true);
-    return () => document.removeEventListener('keydown', handleKeyDown, true);
-  }, [open, close]);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown, true);
+      // Restore focus to whatever opened the dialog.
+      lastFocusedRef.current?.focus();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   return (
     <div className="relative">
       <button
-        onClick={() => setOpen((v) => !v)}
-        className="w-6 h-6 rounded-full border text-xs font-bold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
+        ref={triggerRef}
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-11 h-11 md:w-9 md:h-9 rounded-full border text-sm font-bold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
         aria-label="Keyboard shortcuts"
-        title="Keyboard shortcuts"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        title="Keyboard shortcuts (?)"
       >
         ?
       </button>
 
       {open && (
         <>
-          <div className="fixed inset-0 z-40" onClick={close} />
-          <div className="absolute right-0 top-8 z-50 bg-white dark:bg-gray-900 border rounded-xl shadow-xl p-4 w-56 animate-slide-up">
-            <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-3 uppercase tracking-wide">
-              Keyboard Shortcuts
-            </h3>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} aria-hidden="true" />
+          <div
+            className="absolute right-0 top-12 z-50 bg-white dark:bg-gray-900 border rounded-xl shadow-xl p-4 w-64 animate-slide-up"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Keyboard shortcuts"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                Keyboard Shortcuts
+              </h3>
+              <button
+                ref={closeBtnRef}
+                type="button"
+                onClick={() => setOpen(false)}
+                className="p-1 rounded -mr-1 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                aria-label="Close shortcuts dialog"
+              >
+                <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
             <ul className="space-y-2">
               {SHORTCUTS.map((shortcut) => (
                 <li key={shortcut.description} className="flex items-center justify-between gap-2">

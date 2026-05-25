@@ -1,5 +1,5 @@
-import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
-import type { AspectRatio, Preset, BorderSettings, ResizeSettings, OutputSettings } from '../types';
+import { memo, useMemo, useState, useRef, useEffect, useCallback } from 'react';
+import type { AspectRatio, Preset, BorderSettings, ResizeSettings, OutputSettings, ToastVariant } from '../types';
 import { useCustomPresets } from '../hooks/useCustomPresets';
 import { DEFAULT_GRADIENT_STOPS } from '../utils/constants';
 
@@ -8,6 +8,7 @@ interface PresetButtonsProps {
   currentResize: ResizeSettings;
   currentOutput: OutputSettings;
   onApply: (border: BorderSettings, resize?: ResizeSettings, output?: OutputSettings, targetAspectRatio?: AspectRatio) => void;
+  onToast?: (message: string, variant?: ToastVariant) => void;
 }
 
 const DEFAULT_PRESETS: Preset[] = [
@@ -76,8 +77,13 @@ const SOCIAL_PRESETS: SocialPreset[] = [
   { id: 'tiktok',       name: '9:16', platform: 'TikTok',     targetAspectRatio: { width: 9, height: 16 }, description: 'TikTok vertical' },
 ];
 
-export function PresetButtons({ currentBorder, currentResize, currentOutput, onApply }: PresetButtonsProps) {
-  const { customPresets, savePreset, renamePreset, deletePreset } = useCustomPresets();
+function PresetButtonsImpl({ currentBorder, currentResize, currentOutput, onApply, onToast }: PresetButtonsProps) {
+  const handlePersistError = useCallback((err: Error) => {
+    onToast?.(`Couldn't save preset — ${err.message}`, 'error');
+  }, [onToast]);
+  const { customPresets, savePreset, renamePreset, deletePreset } = useCustomPresets({
+    onPersistError: handlePersistError,
+  });
   const [saveName, setSaveName] = useState('');
   const [showSaveInput, setShowSaveInput] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -149,54 +155,69 @@ export function PresetButtons({ currentBorder, currentResize, currentOutput, onA
     setRenameValue(preset.name);
   }, []);
 
+  const checkmark = (
+    <svg className="w-3 h-3 -ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+    </svg>
+  );
+
   return (
     <div className="space-y-3">
-      {/* Built-in presets */}
       <div>
         <h3 className="font-medium text-sm text-gray-700 dark:text-gray-200 uppercase tracking-wider mb-2">
           Quick Presets
         </h3>
-        <div className="flex flex-wrap gap-2">
-          {DEFAULT_PRESETS.map((preset) => (
-            <button
-              key={preset.id}
-              onClick={() => onApply(preset.border)}
-              className={`
-                px-3 py-1.5 text-sm rounded-lg transition-all
-                ${isDefaultActive(preset)
-                  ? 'bg-blue-500 text-white shadow-md'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                }
-              `}
-              title={preset.description}
-            >
-              <span className="flex items-center gap-1.5">
-                <span
-                  className="w-3 h-3 rounded-sm border border-gray-300 dark:border-gray-600"
-                  style={{ backgroundColor: preset.border.color }}
-                />
-                {preset.name}
-              </span>
-            </button>
-          ))}
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Quick border presets">
+          {DEFAULT_PRESETS.map((preset) => {
+            const active = isDefaultActive(preset);
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => onApply(preset.border)}
+                className={`
+                  px-3 py-2 min-h-[36px] text-sm rounded-lg transition-all
+                  focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2
+                  ${active
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  }
+                `}
+                title={preset.description}
+                aria-pressed={active}
+                aria-label={`${preset.name} preset${active ? ', selected' : ''}`}
+              >
+                <span className="flex items-center gap-1.5">
+                  {active && checkmark}
+                  <span
+                    className="w-4 h-4 rounded-sm border border-gray-300 dark:border-gray-600"
+                    style={{ backgroundColor: preset.border.color }}
+                    aria-hidden="true"
+                  />
+                  {preset.name}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Social media presets */}
       <div>
         <h3 className="font-medium text-sm text-gray-700 dark:text-gray-200 uppercase tracking-wider mb-2">
           Social
         </h3>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Social media aspect-ratio presets">
           {SOCIAL_PRESETS.map((preset) => (
             <button
               key={preset.id}
+              type="button"
               onClick={() => onApply(SOCIAL_BORDER, undefined, undefined, preset.targetAspectRatio)}
-              className="px-3 py-1.5 text-sm rounded-lg transition-all bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+              className="px-3 py-2 min-h-[36px] text-sm rounded-lg transition-all bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
               title={preset.description}
+              aria-label={`${preset.platform} ${preset.name}`}
             >
               <span className="flex items-center gap-1.5">
-                <span className="text-xs text-gray-400 dark:text-gray-500">{preset.platform}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">{preset.platform}</span>
                 <span className="font-medium">{preset.name}</span>
               </span>
             </button>
@@ -204,7 +225,6 @@ export function PresetButtons({ currentBorder, currentResize, currentOutput, onA
         </div>
       </div>
 
-      {/* Custom presets */}
       <div>
         <div className="flex items-center justify-between mb-2">
           <h3 className="font-medium text-sm text-gray-700 dark:text-gray-200 uppercase tracking-wider">
@@ -212,9 +232,10 @@ export function PresetButtons({ currentBorder, currentResize, currentOutput, onA
           </h3>
           {!showSaveInput && (
             <button
+              type="button"
               onClick={() => setShowSaveInput(true)}
-              className="text-xs px-2 py-1 rounded-md bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
-              title="Save current settings as a preset"
+              className="text-xs px-2 py-1 rounded-md bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              aria-label="Save current settings as a preset"
             >
               + Save current
             </button>
@@ -223,26 +244,30 @@ export function PresetButtons({ currentBorder, currentResize, currentOutput, onA
 
         {showSaveInput && (
           <div className="flex gap-2 mb-2">
+            <label htmlFor="preset-name" className="sr-only">Preset name</label>
             <input
+              id="preset-name"
               ref={saveInputRef}
               type="text"
               value={saveName}
               onChange={(e) => setSaveName(e.target.value)}
               onKeyDown={handleSaveKeyDown}
               placeholder="Preset name…"
-              className="flex-1 text-sm px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="flex-1 text-sm px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
               maxLength={40}
             />
             <button
+              type="button"
               onClick={handleSave}
               disabled={!saveName.trim()}
-              className="text-sm px-3 py-1.5 rounded-lg bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="text-sm px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
             >
               Save
             </button>
             <button
+              type="button"
               onClick={() => { setSaveName(''); setShowSaveInput(false); }}
-              className="text-sm px-2.5 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              className="text-sm px-2.5 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
             >
               Cancel
             </button>
@@ -250,78 +275,92 @@ export function PresetButtons({ currentBorder, currentResize, currentOutput, onA
         )}
 
         {customPresets.length === 0 && !showSaveInput ? (
-          <p className="text-xs text-gray-400 dark:text-gray-500 italic">
+          <p className="text-xs text-gray-500 dark:text-gray-400 italic">
             No saved presets yet. Click &quot;Save current&quot; to add one.
           </p>
         ) : (
           <div className="flex flex-wrap gap-2">
-            {customPresets.map((preset) => (
-              <div
-                key={preset.id}
-                className={`
-                  flex items-center gap-1 pl-2.5 pr-1 py-1 rounded-lg text-sm border transition-all
-                  ${isCustomActive(preset)
-                    ? 'bg-violet-500 border-violet-500 text-white shadow-md'
-                    : 'bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-700 text-violet-700 dark:text-violet-300 hover:bg-violet-100 dark:hover:bg-violet-900/40'
-                  }
-                `}
-              >
-                {renamingId === preset.id ? (
-                  <input
-                    ref={renameInputRef}
-                    type="text"
-                    value={renameValue}
-                    onChange={(e) => setRenameValue(e.target.value)}
-                    onKeyDown={(e) => handleRenameKeyDown(e, preset.id)}
-                    onBlur={() => {
-                      if (renameValue.trim()) {
-                        renamePreset(preset.id, renameValue);
-                      }
-                      setRenamingId(null);
-                    }}
-                    className="text-sm w-28 bg-transparent outline-none border-b border-current"
-                    maxLength={40}
-                  />
-                ) : (
+            {customPresets.map((preset) => {
+              const active = isCustomActive(preset);
+              return (
+                <div
+                  key={preset.id}
+                  className={`
+                    flex items-center gap-1 pl-2.5 pr-1 py-1 rounded-lg text-sm border transition-all
+                    ${active
+                      ? 'bg-violet-600 border-violet-600 text-white shadow-md'
+                      : 'bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-700 text-violet-800 dark:text-violet-200 hover:bg-violet-100 dark:hover:bg-violet-900/40'
+                    }
+                  `}
+                >
+                  {renamingId === preset.id ? (
+                    <>
+                      <label htmlFor={`rename-${preset.id}`} className="sr-only">Rename preset</label>
+                      <input
+                        id={`rename-${preset.id}`}
+                        ref={renameInputRef}
+                        type="text"
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onKeyDown={(e) => handleRenameKeyDown(e, preset.id)}
+                        onBlur={() => {
+                          if (renameValue.trim()) renamePreset(preset.id, renameValue);
+                          setRenamingId(null);
+                        }}
+                        className="text-sm w-28 bg-transparent outline-none border-b border-current"
+                        maxLength={40}
+                      />
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onApply(preset.border, preset.resize, preset.output)}
+                      className="flex items-center gap-1.5 min-h-[32px] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:rounded"
+                      aria-label={`Apply preset ${preset.name}${active ? ', selected' : ''}`}
+                      aria-pressed={active}
+                      title={`Apply "${preset.name}"`}
+                    >
+                      {active && checkmark}
+                      <span
+                        className="w-3 h-3 rounded-sm border border-current opacity-70"
+                        style={{ backgroundColor: preset.border.color }}
+                        aria-hidden="true"
+                      />
+                      {preset.name}
+                    </button>
+                  )}
+
                   <button
-                    onClick={() => onApply(preset.border, preset.resize, preset.output)}
-                    className="flex items-center gap-1.5"
-                    title={`Apply "${preset.name}" — border${preset.resize ? ' + resize' : ''}${preset.output ? ' + output' : ''}`}
+                    type="button"
+                    onClick={() => startRename(preset)}
+                    className="ml-0.5 opacity-70 hover:opacity-100 transition-opacity p-1.5 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    aria-label={`Rename preset ${preset.name}`}
+                    title="Rename"
                   >
-                    <span
-                      className="w-3 h-3 rounded-sm border border-current opacity-70"
-                      style={{ backgroundColor: preset.border.color }}
-                    />
-                    {preset.name}
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 2.828L11.828 15.828a2 2 0 01-1.414.586H9v-1.414A2 2 0 019.586 13z" />
+                    </svg>
                   </button>
-                )}
 
-                {/* Rename button */}
-                <button
-                  onClick={() => startRename(preset)}
-                  className="ml-0.5 opacity-60 hover:opacity-100 transition-opacity p-0.5 rounded"
-                  title="Rename"
-                >
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 2.828L11.828 15.828a2 2 0 01-1.414.586H9v-1.414A2 2 0 019.586 13z" />
-                  </svg>
-                </button>
-
-                {/* Delete button */}
-                <button
-                  onClick={() => deletePreset(preset.id)}
-                  className="opacity-60 hover:opacity-100 transition-opacity p-0.5 rounded"
-                  title="Delete preset"
-                >
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            ))}
+                  <button
+                    type="button"
+                    onClick={() => deletePreset(preset.id)}
+                    className="opacity-70 hover:opacity-100 transition-opacity p-1.5 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    aria-label={`Delete preset ${preset.name}`}
+                    title="Delete preset"
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
     </div>
   );
 }
+
+export const PresetButtons = memo(PresetButtonsImpl);
