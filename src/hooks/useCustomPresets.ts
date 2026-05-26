@@ -157,14 +157,6 @@ export function useCustomPresets(options: UseCustomPresetsOptions = {}): UseCust
     ): Preset | null => {
       const trimmed = name.trim().slice(0, MAX_NAME_LENGTH);
       if (!trimmed) return null;
-      if (customPresets.length >= MAX_PRESET_COUNT) {
-        // Surface failure to the caller instead of silently dropping — otherwise
-        // the dialog closes and the user thinks the preset was saved.
-        const error = new Error(`Preset limit reached (${MAX_PRESET_COUNT}). Delete one to save another.`);
-        console.warn('Framr:', error.message);
-        onPersistErrorRef.current?.(error);
-        return null;
-      }
       const preset: Preset = {
         id: `custom-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         name: trimmed,
@@ -173,10 +165,24 @@ export function useCustomPresets(options: UseCustomPresetsOptions = {}): UseCust
         output,
         isCustom: true,
       };
-      setCustomPresets((prev) => [...prev, preset]);
+      // The cap must be checked inside the state updater against `prev.length`,
+      // not against the render-time `customPresets.length`. Rapid double-saves
+      // would otherwise both pass a stale closure check and exceed the cap.
+      let admitted = false;
+      setCustomPresets((prev) => {
+        if (prev.length >= MAX_PRESET_COUNT) return prev;
+        admitted = true;
+        return [...prev, preset];
+      });
+      if (!admitted) {
+        const error = new Error(`Preset limit reached (${MAX_PRESET_COUNT}). Delete one to save another.`);
+        console.warn('Framr:', error.message);
+        onPersistErrorRef.current?.(error);
+        return null;
+      }
       return preset;
     },
-    [customPresets.length],
+    [],
   );
 
   const renamePreset = useCallback((id: string, name: string) => {

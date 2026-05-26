@@ -219,7 +219,9 @@ function ImageQueueImpl({
               ].join(' ')}
               role="option"
               aria-selected={isSelected}
-              tabIndex={isSelected ? 0 : -1}
+              // Keep one fallback row in the tab order so the queue stays
+              // reachable after Esc clears selection.
+              tabIndex={isSelected || (selectedId === null && index === 0) ? 0 : -1}
             >
               {isSelected && (
                 <span className="sr-only">Selected.</span>

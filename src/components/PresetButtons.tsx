@@ -1,4 +1,4 @@
-import { memo, useMemo, useState, useRef, useEffect, useCallback } from 'react';
+import { memo, useId, useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import type { AspectRatio, Preset, BorderSettings, ResizeSettings, OutputSettings, ToastVariant } from '../types';
 import { useCustomPresets } from '../hooks/useCustomPresets';
 import { DEFAULT_GRADIENT_STOPS } from '../utils/constants';
@@ -129,10 +129,18 @@ function PresetButtonsImpl({ currentBorder, currentResize, currentOutput, onAppl
     };
   }, [currentResize, currentOutput, isDefaultActive]);
 
+  const presetNameInputId = useId();
+
   const handleSave = useCallback(() => {
     const name = saveName.trim();
     if (!name) return;
-    savePreset(name, currentBorder, currentResize, currentOutput);
+    const saved = savePreset(name, currentBorder, currentResize, currentOutput);
+    if (!saved) {
+      // savePreset returned null (limit reached, empty name); leave the dialog
+      // open so the user sees the toast and can adjust rather than thinking it
+      // silently succeeded.
+      return;
+    }
     setSaveName('');
     setShowSaveInput(false);
   }, [saveName, currentBorder, currentResize, currentOutput, savePreset]);
@@ -271,9 +279,9 @@ function PresetButtonsImpl({ currentBorder, currentResize, currentOutput, onAppl
 
         {showSaveInput && (
           <div className="flex gap-2 mb-2">
-            <label htmlFor="preset-name" className="sr-only">Preset name</label>
+            <label htmlFor={presetNameInputId} className="sr-only">Preset name</label>
             <input
-              id="preset-name"
+              id={presetNameInputId}
               ref={saveInputRef}
               type="text"
               value={saveName}

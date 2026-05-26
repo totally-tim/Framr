@@ -54,7 +54,12 @@ export function useImageProcessor() {
       worker.onerror = (event) => {
         console.error('Framr: worker error', event.message, event);
         const pending = Array.from(pendingHandlersRef.current);
+        pendingHandlersRef.current.clear();
         for (const handler of pending) {
+          // cleanup() removes the message listener and clears the per-image
+          // timeout; without it the listeners and timers would leak across
+          // every crash + recreate cycle.
+          handler.cleanup();
           handler.reject(new Error(`Worker crashed: ${event.message || 'unknown error'}`));
         }
         // Force a fresh worker on next call.

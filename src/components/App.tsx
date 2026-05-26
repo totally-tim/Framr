@@ -208,9 +208,14 @@ export default function App() {
     const pendingImages = images.filter((img) => img.status === 'pending');
     if (pendingImages.length === 0) return;
 
+    // Track which IDs we optimistically flipped to "processing" so a busy
+    // rollback only touches THESE rows — not any row already being processed
+    // by an earlier batch.
+    const optimisticIds = new Set(pendingImages.map((img) => img.id));
+
     setImages((prev) =>
       prev.map((img) =>
-        img.status === 'pending' ? { ...img, status: 'processing' } : img,
+        optimisticIds.has(img.id) ? { ...img, status: 'processing' } : img,
       ),
     );
 
@@ -254,10 +259,13 @@ export default function App() {
     );
 
     if (rejected === 'busy') {
-      // Roll back the optimistic status change since we never actually started.
+      // Roll back only the rows this click flipped — don't disturb the image
+      // an earlier batch is genuinely working on.
       setImages((prev) =>
         prev.map((img) =>
-          img.status === 'processing' ? { ...img, status: 'pending' } : img,
+          optimisticIds.has(img.id) && img.status === 'processing'
+            ? { ...img, status: 'pending' }
+            : img,
         ),
       );
       addToast('Already processing — wait for the current batch to finish.', 'warning');
