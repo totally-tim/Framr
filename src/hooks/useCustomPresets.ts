@@ -120,6 +120,13 @@ export function useCustomPresets(options: UseCustomPresetsOptions = {}): UseCust
   const onPersistErrorRef = useRef(options.onPersistError);
   useEffect(() => { onPersistErrorRef.current = options.onPersistError; }, [options.onPersistError]);
 
+  // Synchronous mirror of the in-flight count. The capacity gate reads + bumps
+  // this ref atomically before queuing setCustomPresets, so two rapid saves
+  // can't both pass a stale closure check (and React 19's deferred scheduling
+  // doesn't let us observe setter side-effects synchronously).
+  const inFlightCountRef = useRef(customPresets.length);
+  useEffect(() => { inFlightCountRef.current = customPresets.length; }, [customPresets.length]);
+
   // Persist on change.
   useEffect(() => {
     if (skipNextWrite.current) {
@@ -157,6 +164,15 @@ export function useCustomPresets(options: UseCustomPresetsOptions = {}): UseCust
     ): Preset | null => {
       const trimmed = name.trim().slice(0, MAX_NAME_LENGTH);
       if (!trimmed) return null;
+      // Atomic check + bump on the ref — single-threaded JS guarantees no two
+      // savePreset calls race here, so two rapid clicks can never both pass.
+      if (inFlightCountRef.current >= MAX_PRESET_COUNT) {
+        const error = new Error(`Preset limit reached (${MAX_PRESET_COUNT}). Delete one to save another.`);
+        console.warn('Framr:', error.message);
+        onPersistErrorRef.current?.(error);
+        return null;
+      }
+      inFlightCountRef.current += 1;
       const preset: Preset = {
         id: `custom-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         name: trimmed,
@@ -165,21 +181,7 @@ export function useCustomPresets(options: UseCustomPresetsOptions = {}): UseCust
         output,
         isCustom: true,
       };
-      // The cap must be checked inside the state updater against `prev.length`,
-      // not against the render-time `customPresets.length`. Rapid double-saves
-      // would otherwise both pass a stale closure check and exceed the cap.
-      let admitted = false;
-      setCustomPresets((prev) => {
-        if (prev.length >= MAX_PRESET_COUNT) return prev;
-        admitted = true;
-        return [...prev, preset];
-      });
-      if (!admitted) {
-        const error = new Error(`Preset limit reached (${MAX_PRESET_COUNT}). Delete one to save another.`);
-        console.warn('Framr:', error.message);
-        onPersistErrorRef.current?.(error);
-        return null;
-      }
+      setCustomPresets((prev) => [...prev, preset]);
       return preset;
     },
     [],

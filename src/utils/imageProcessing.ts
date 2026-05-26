@@ -1,4 +1,4 @@
-import type { AspectRatio, BorderSettings, ResizeSettings, OutputSettings } from '../types';
+import type { AspectRatio, BorderSettings, ResizeSettings } from '../types';
 
 export function getFileExtension(filename: string): string {
   const match = filename.match(/\.([^.]+)$/);
@@ -162,24 +162,18 @@ export function calculateOutputDimensions(
   };
 }
 
+/**
+ * Build the output filename. Callers MUST pass the resolved MIME (post
+ * `resolveEncodableMime`) so the filename extension matches the bytes
+ * we actually encoded — passing the requested format risks shipping
+ * PNG bytes with a `.tiff` extension when the browser can't encode TIFF.
+ */
 export function generateOutputFilename(
   originalName: string,
-  outputFormat: string | OutputSettings,
+  encodedMime: string,
 ): string {
   const sanitized = sanitizeOutputBasename(originalName);
   const baseName = sanitized.replace(/\.[^.]+$/, '') || 'image';
-  const format = typeof outputFormat === 'string' ? outputFormat : outputFormat.format;
-  let extension: string;
-
-  if (format === 'original') {
-    extension = getFileExtension(sanitized) || 'jpg';
-    // TIFF outputs are silently re-encoded as PNG by the worker; reflect that here.
-    if (extension === 'tiff' || extension === 'tif') {
-      extension = 'png';
-    }
-  } else {
-    extension = format === 'jpeg' ? 'jpg' : format;
-  }
-
+  const extension = mimeToExtension(encodedMime);
   return `${baseName}_bordered.${extension}`;
 }

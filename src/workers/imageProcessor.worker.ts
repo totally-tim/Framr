@@ -149,7 +149,9 @@ async function processImage(message: ProcessMessage): Promise<void> {
 
     self.postMessage({ type: 'progress', imageId, batchId, progress: 90 } as ProgressMessage);
 
-    const outputFilename = generateOutputFilename(filename, outputSettings.format);
+    // Derive extension from the MIME we actually encoded with — so a TIFF
+    // request that got downgraded to PNG ships as .png, not .tiff.
+    const outputFilename = generateOutputFilename(filename, mime);
 
     self.postMessage({
       type: 'result',
