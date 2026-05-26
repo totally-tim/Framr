@@ -116,7 +116,12 @@ export interface UseCustomPresetsApi {
 
 export function useCustomPresets(options: UseCustomPresetsOptions = {}): UseCustomPresetsApi {
   const [customPresets, setCustomPresets] = useState<Preset[]>(loadFromStorage);
-  const skipNextWrite = useRef(true); // skip first save (we just read from storage)
+  // Track the last value we know is in storage so the persist effect can
+  // skip echo-writes (after a cross-tab storage event) without skipping
+  // genuine local edits. A simple flag-based "skip next write" would also
+  // suppress the next legitimate save if a local mutation lands before the
+  // storage-sync's effect runs.
+  const lastWrittenJsonRef = useRef<string | undefined>(undefined);
   const onPersistErrorRef = useRef(options.onPersistError);
   useEffect(() => { onPersistErrorRef.current = options.onPersistError; }, [options.onPersistError]);
 
@@ -127,14 +132,18 @@ export function useCustomPresets(options: UseCustomPresetsOptions = {}): UseCust
   const inFlightCountRef = useRef(customPresets.length);
   useEffect(() => { inFlightCountRef.current = customPresets.length; }, [customPresets.length]);
 
-  // Persist on change.
+  // Persist on change. The first commit just snapshots — initial state already
+  // came from storage, so there's nothing to write yet.
   useEffect(() => {
-    if (skipNextWrite.current) {
-      skipNextWrite.current = false;
+    const json = JSON.stringify(customPresets);
+    if (lastWrittenJsonRef.current === undefined) {
+      lastWrittenJsonRef.current = json;
       return;
     }
+    if (json === lastWrittenJsonRef.current) return;
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(customPresets));
+      localStorage.setItem(STORAGE_KEY, json);
+      lastWrittenJsonRef.current = json;
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to save preset');
       console.warn('Framr: failed to write custom presets', error);
@@ -144,12 +153,15 @@ export function useCustomPresets(options: UseCustomPresetsOptions = {}): UseCust
 
   // Multi-tab sync. Note: removeItem/clear in another tab fires a storage event
   // with newValue === null — we must reload (loadFromStorage returns []) rather
-  // than skip, otherwise cross-tab deletions never propagate.
+  // than skip, otherwise cross-tab deletions never propagate. We update
+  // lastWrittenJsonRef to the synced snapshot so the next persist effect
+  // recognizes it as already-in-storage and skips the echo-write.
   useEffect(() => {
     const handler = (e: StorageEvent) => {
       if (e.key !== STORAGE_KEY && e.key !== null) return;
-      skipNextWrite.current = true;
-      setCustomPresets(loadFromStorage());
+      const fresh = loadFromStorage();
+      lastWrittenJsonRef.current = JSON.stringify(fresh);
+      setCustomPresets(fresh);
     };
     window.addEventListener('storage', handler);
     return () => window.removeEventListener('storage', handler);

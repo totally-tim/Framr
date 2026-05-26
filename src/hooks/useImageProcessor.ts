@@ -85,10 +85,12 @@ export function useImageProcessor() {
   useEffect(() => {
     ensureWorker();
     return () => {
-      // Mirror cancel semantics: reject in-flight handlers + clear their
-      // timers, then terminate the worker. Without this, any in-flight
-      // processImages promise stays pending until its 90s timeout fires —
-      // timers keep running and stale state updates fire post-unmount.
+      // Set cancelledRef BEFORE draining so processImages's catch-path
+      // (`if (cancelledRef.current) break`) exits the loop immediately. If
+      // we only drain, the rejection lands in the catch but the loop keeps
+      // iterating, re-acquires a fresh worker, and fires stale callbacks
+      // after the component has unmounted.
+      cancelledRef.current = true;
       drainAndRecycleWorker('Component unmounted');
     };
   }, [ensureWorker, drainAndRecycleWorker]);
