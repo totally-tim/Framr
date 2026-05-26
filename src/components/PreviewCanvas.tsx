@@ -28,9 +28,12 @@ const PREVIEW_MODES: { value: PreviewMode; label: string }[] = [
 
 interface PreviewSource {
   id: string;
+  /** Display bitmap — may be downscaled to MAX_PREVIEW_SIZE for performance. */
   bitmap: ImageBitmap;
-  width: number;
-  height: number;
+  /** True image dimensions. All border / resize math must use these so px-based
+   *  settings preview at the same proportions they will export at. */
+  originalWidth: number;
+  originalHeight: number;
 }
 
 function formatLocalDate(d: Date): string {
@@ -40,17 +43,26 @@ function formatLocalDate(d: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-async function decodePreviewBitmap(file: File): Promise<{ bitmap: ImageBitmap; width: number; height: number }> {
+interface DecodedPreview {
+  bitmap: ImageBitmap;
+  originalWidth: number;
+  originalHeight: number;
+}
+
+async function decodePreviewBitmap(file: File): Promise<DecodedPreview> {
   // Render the preview against a downscaled bitmap — full-resolution source can be 50MP and
-  // killing every slider tick. Cap the long edge to MAX_PREVIEW_SIZE so canvas redraws stay fast.
+  // kill every slider tick. Cap the long edge to MAX_PREVIEW_SIZE so canvas redraws stay fast,
+  // BUT carry the true dimensions out so geometry math stays accurate to export.
   const sourceBitmap = await createImageBitmap(file);
-  const longest = Math.max(sourceBitmap.width, sourceBitmap.height);
+  const originalWidth = sourceBitmap.width;
+  const originalHeight = sourceBitmap.height;
+  const longest = Math.max(originalWidth, originalHeight);
   if (longest <= MAX_PREVIEW_SIZE) {
-    return { bitmap: sourceBitmap, width: sourceBitmap.width, height: sourceBitmap.height };
+    return { bitmap: sourceBitmap, originalWidth, originalHeight };
   }
   const scale = MAX_PREVIEW_SIZE / longest;
-  const w = Math.round(sourceBitmap.width * scale);
-  const h = Math.round(sourceBitmap.height * scale);
+  const w = Math.round(originalWidth * scale);
+  const h = Math.round(originalHeight * scale);
   try {
     const downscaled = await createImageBitmap(sourceBitmap, {
       resizeWidth: w,
@@ -58,9 +70,9 @@ async function decodePreviewBitmap(file: File): Promise<{ bitmap: ImageBitmap; w
       resizeQuality: 'high',
     });
     sourceBitmap.close();
-    return { bitmap: downscaled, width: w, height: h };
+    return { bitmap: downscaled, originalWidth, originalHeight };
   } catch {
-    return { bitmap: sourceBitmap, width: sourceBitmap.width, height: sourceBitmap.height };
+    return { bitmap: sourceBitmap, originalWidth, originalHeight };
   }
 }
 
@@ -120,9 +132,13 @@ export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBac
     containerWidth: number,
     containerHeight: number,
   ) => {
+    // Border / resize math runs on the ORIGINAL image dimensions so px-based
+    // settings preview at the same proportions they will export at. The
+    // downscaled `source.bitmap` is only used as the drawImage source — the
+    // canvas math doesn't care that the underlying texture is smaller.
     const { width: resizedWidth, height: resizedHeight } = calculateOutputDimensions(
-      source.width,
-      source.height,
+      source.originalWidth,
+      source.originalHeight,
       borderMode !== 'none' ? debouncedResizeSettings : { enabled: false, maintainAspect: true, unit: 'px' },
     );
 
@@ -200,7 +216,12 @@ export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBac
         }
         // Close the previous source if we still hold one.
         previewSourceRef.current?.bitmap.close();
-        source = { id: image.id, bitmap: decoded.bitmap, width: decoded.width, height: decoded.height };
+        source = {
+          id: image.id,
+          bitmap: decoded.bitmap,
+          originalWidth: decoded.originalWidth,
+          originalHeight: decoded.originalHeight,
+        };
         previewSourceRef.current = source;
       }
 
