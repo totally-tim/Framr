@@ -559,7 +559,7 @@ export default function App() {
 
       <footer className="hidden md:flex items-center justify-between py-3 px-6 border-t text-xs text-ink-100 dark:text-darkroom-500 bg-paper-50/60 dark:bg-darkroom-100/60 backdrop-blur-sm">
         <span className="font-mono uppercase tracking-[0.15em]">
-          0 uploads · 100% on-device
+          No uploads · 100% on-device
         </span>
         <a
           href="https://github.com/totally-tim/framr"

@@ -84,13 +84,14 @@ export function useImageProcessor() {
 
   useEffect(() => {
     ensureWorker();
-    const pendingSet = pendingHandlersRef.current;
     return () => {
-      workerRef.current?.terminate();
-      workerRef.current = null;
-      pendingSet.clear();
+      // Mirror cancel semantics: reject in-flight handlers + clear their
+      // timers, then terminate the worker. Without this, any in-flight
+      // processImages promise stays pending until its 90s timeout fires —
+      // timers keep running and stale state updates fire post-unmount.
+      drainAndRecycleWorker('Component unmounted');
     };
-  }, [ensureWorker]);
+  }, [ensureWorker, drainAndRecycleWorker]);
 
   const processImages = useCallback(
     async (

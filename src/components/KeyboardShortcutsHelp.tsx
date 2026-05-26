@@ -74,7 +74,6 @@ export function KeyboardShortcutsHelp({ isOpen: controlledOpen, onOpenChange }: 
           <div
             className="absolute right-0 top-12 z-50 bg-white dark:bg-gray-900 border rounded-xl shadow-xl p-4 w-64 animate-slide-up"
             role="dialog"
-            aria-modal="true"
             aria-label="Keyboard shortcuts"
           >
             <div className="flex items-center justify-between mb-3">
