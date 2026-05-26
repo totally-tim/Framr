@@ -47,32 +47,40 @@ export function useImageProcessor() {
   const pendingHandlersRef = useRef<Set<PendingHandler>>(new Set());
   const fontFallbackToastRef = useRef<((msg: string) => void) | null>(null);
 
+  // Reject every pending handler and force a fresh worker on next call.
+  // Used by both onerror (uncaught exception) and onmessageerror
+  // (deserialization failure) — both leave handlers stuck otherwise.
+  const drainAndRecycleWorker = useCallback((reason: string) => {
+    const pending = Array.from(pendingHandlersRef.current);
+    pendingHandlersRef.current.clear();
+    for (const handler of pending) {
+      handler.cleanup();
+      handler.reject(new Error(reason));
+    }
+    workerRef.current?.terminate();
+    workerRef.current = null;
+  }, []);
+
   // Recreate the worker lazily so a StrictMode teardown doesn't leave us with a terminated worker.
   const ensureWorker = useCallback((): Worker => {
     if (!workerRef.current) {
       const worker = createWorker();
       worker.onerror = (event) => {
         console.error('Framr: worker error', event.message, event);
-        const pending = Array.from(pendingHandlersRef.current);
-        pendingHandlersRef.current.clear();
-        for (const handler of pending) {
-          // cleanup() removes the message listener and clears the per-image
-          // timeout; without it the listeners and timers would leak across
-          // every crash + recreate cycle.
-          handler.cleanup();
-          handler.reject(new Error(`Worker crashed: ${event.message || 'unknown error'}`));
-        }
-        // Force a fresh worker on next call.
-        workerRef.current?.terminate();
-        workerRef.current = null;
+        drainAndRecycleWorker(`Worker crashed: ${event.message || 'unknown error'}`);
       };
       worker.onmessageerror = (event) => {
         console.error('Framr: worker messageerror (structured-clone failed)', event);
+        // messageerror means the runtime couldn't deserialize a message —
+        // the pending handler for that image will never see a result, so
+        // we must reject pending handlers and recycle the worker, same as
+        // an onerror crash.
+        drainAndRecycleWorker('Worker message could not be deserialized');
       };
       workerRef.current = worker;
     }
     return workerRef.current;
-  }, []);
+  }, [drainAndRecycleWorker]);
 
   useEffect(() => {
     ensureWorker();
@@ -99,7 +107,6 @@ export function useImageProcessor() {
         return { results: [], rejected: 'busy' };
       }
 
-      const worker = ensureWorker();
       const batchId = (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
         ? crypto.randomUUID()
         : `batch-${Date.now()}-${Math.random()}`;
@@ -157,6 +164,11 @@ export function useImageProcessor() {
 
           try {
             const bitmap = await createImageBitmap(image.file);
+            // Re-acquire the worker each iteration — a crash (onerror /
+            // onmessageerror) recycles workerRef.current to null, and the
+            // remaining images need to post to the *new* worker, not the
+            // dead handle captured at the top of the batch.
+            const worker = ensureWorker();
 
             const result = await new Promise<ProcessingResult>((resolve, reject) => {
               let timeoutId: ReturnType<typeof setTimeout> | null = null;
