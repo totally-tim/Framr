@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import type { AspectRatio, ImageFile, BorderSettings, ResizeSettings, OutputSettings, ProcessingResult, CanvasBackground, Toast, ToastVariant, TextOverlaySettings } from '../types';
 import { createImageFile, checkMemoryWarning, cleanupImageResources, generateId, ImageLoadError } from '../utils/imageUtils';
 import { DEFAULT_BORDER_SETTINGS } from '../utils/constants';
@@ -102,9 +102,15 @@ export default function App() {
     resetState,
   } = useImageProcessor();
 
-  // Mirror images into a ref so async work can see the latest list without re-running.
-  const imagesRef = useRef<ImageFile[]>(images);
-  useEffect(() => { imagesRef.current = images; }, [images]);
+  // Synchronously-maintained membership for orphan-result detection. Worker
+  // callbacks need to know "is this imageId still in the queue right now?"
+  // — and the post-commit effect that mirrors `images` into a ref lags one
+  // render behind. Updating this Set imperatively in the mutation handlers
+  // (before the setImages call) closes the window where a result for a
+  // just-removed image could still be appended.
+  const liveImageIdsRef = useRef<Set<string>>(new Set());
+  // Cache of imageId → name for richer error/completion toasts.
+  const imageNamesRef = useRef<Map<string, string>>(new Map());
 
   const handleFilesSelected = useCallback(async (files: File[]) => {
     const newImages: ImageFile[] = [];
@@ -131,6 +137,12 @@ export default function App() {
     }
 
     if (newImages.length > 0) {
+      // Update the membership refs synchronously before queuing state so a
+      // worker message arriving on the very next microtask sees the new IDs.
+      for (const img of newImages) {
+        liveImageIdsRef.current.add(img.id);
+        imageNamesRef.current.set(img.id, img.name);
+      }
       setImages((prev) => {
         const updated = [...prev, ...newImages];
         setMemoryWarning(checkMemoryWarning(updated));
@@ -149,6 +161,11 @@ export default function App() {
   }, [addToast]);
 
   const handleRemoveImage = useCallback((id: string) => {
+    // Drop from the membership ref synchronously so any worker result already
+    // in flight is treated as orphan.
+    liveImageIdsRef.current.delete(id);
+    imageNamesRef.current.delete(id);
+
     let removedImage: ImageFile | undefined;
 
     setImages((prev) => {
@@ -189,6 +206,10 @@ export default function App() {
   const handleClearAll = useCallback(() => {
     // Cancel any in-flight work first so worker callbacks can't re-populate the lists we're about to wipe.
     cancelProcessing();
+
+    // Drop membership synchronously so late worker messages are treated as orphans.
+    liveImageIdsRef.current.clear();
+    imageNamesRef.current.clear();
 
     setImages((prev) => {
       prev.forEach(cleanupImageResources);
@@ -234,10 +255,12 @@ export default function App() {
       pendingImages,
       config,
       (imageId, result) => {
-        // Drop orphan results — image may have been removed during processing.
-        if (!imagesRef.current.some((img) => img.id === imageId)) return;
-        const image = imagesRef.current.find((img) => img.id === imageId);
-        if (image) completedNames.push(image.name);
+        // Drop orphan results — the membership ref is updated synchronously
+        // inside handleRemoveImage/handleClearAll, so this check sees a removal
+        // even before React has committed the state change.
+        if (!liveImageIdsRef.current.has(imageId)) return;
+        const name = imageNamesRef.current.get(imageId);
+        if (name) completedNames.push(name);
         setImages((prev) =>
           prev.map((img) =>
             img.id === imageId ? { ...img, status: 'done', processedBlob: result.blob } : img,
@@ -246,9 +269,9 @@ export default function App() {
         setResults((prev) => [...prev, result]);
       },
       (imageId, error) => {
-        if (!imagesRef.current.some((img) => img.id === imageId)) return;
-        const image = imagesRef.current.find((img) => img.id === imageId);
-        if (image) failures.push({ name: image.name, reason: error });
+        if (!liveImageIdsRef.current.has(imageId)) return;
+        const name = imageNamesRef.current.get(imageId);
+        if (name) failures.push({ name, reason: error });
         setImages((prev) =>
           prev.map((img) =>
             img.id === imageId ? { ...img, status: 'error', error } : img,
