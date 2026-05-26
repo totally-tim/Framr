@@ -125,12 +125,16 @@ export function useCustomPresets(options: UseCustomPresetsOptions = {}): UseCust
   const onPersistErrorRef = useRef(options.onPersistError);
   useEffect(() => { onPersistErrorRef.current = options.onPersistError; }, [options.onPersistError]);
 
-  // Synchronous mirror of the in-flight count. The capacity gate reads + bumps
-  // this ref atomically before queuing setCustomPresets, so two rapid saves
-  // can't both pass a stale closure check (and React 19's deferred scheduling
-  // doesn't let us observe setter side-effects synchronously).
-  const inFlightCountRef = useRef(customPresets.length);
-  useEffect(() => { inFlightCountRef.current = customPresets.length; }, [customPresets.length]);
+  // Synchronously-maintained Set of preset IDs in flight. Used for the
+  // capacity gate and idempotent delete tracking. A Set has the advantage
+  // over a count ref that add/delete are idempotent — StrictMode or
+  // concurrent re-invocation can't drift the count by running the same
+  // mutation twice. The sync effect below reseeds the set after React
+  // commits in case any other code path mutated state.
+  const presetIdsRef = useRef<Set<string>>(new Set(customPresets.map((p) => p.id)));
+  useEffect(() => {
+    presetIdsRef.current = new Set(customPresets.map((p) => p.id));
+  }, [customPresets]);
 
   // Persist on change. The first commit just snapshots — initial state already
   // came from storage, so there's nothing to write yet.
@@ -161,6 +165,7 @@ export function useCustomPresets(options: UseCustomPresetsOptions = {}): UseCust
       if (e.key !== STORAGE_KEY && e.key !== null) return;
       const fresh = loadFromStorage();
       lastWrittenJsonRef.current = JSON.stringify(fresh);
+      presetIdsRef.current = new Set(fresh.map((p) => p.id));
       setCustomPresets(fresh);
     };
     window.addEventListener('storage', handler);
@@ -176,15 +181,14 @@ export function useCustomPresets(options: UseCustomPresetsOptions = {}): UseCust
     ): Preset | null => {
       const trimmed = name.trim().slice(0, MAX_NAME_LENGTH);
       if (!trimmed) return null;
-      // Atomic check + bump on the ref — single-threaded JS guarantees no two
+      // Atomic check + add on the ref — single-threaded JS guarantees no two
       // savePreset calls race here, so two rapid clicks can never both pass.
-      if (inFlightCountRef.current >= MAX_PRESET_COUNT) {
+      if (presetIdsRef.current.size >= MAX_PRESET_COUNT) {
         const error = new Error(`Preset limit reached (${MAX_PRESET_COUNT}). Delete one to save another.`);
         console.warn('Framr:', error.message);
         onPersistErrorRef.current?.(error);
         return null;
       }
-      inFlightCountRef.current += 1;
       const preset: Preset = {
         id: `custom-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         name: trimmed,
@@ -193,6 +197,7 @@ export function useCustomPresets(options: UseCustomPresetsOptions = {}): UseCust
         output,
         isCustom: true,
       };
+      presetIdsRef.current.add(preset.id);
       setCustomPresets((prev) => [...prev, preset]);
       return preset;
     },
@@ -208,17 +213,12 @@ export function useCustomPresets(options: UseCustomPresetsOptions = {}): UseCust
   }, []);
 
   const deletePreset = useCallback((id: string) => {
-    setCustomPresets((prev) => {
-      const next = prev.filter((p) => p.id !== id);
-      // Mirror the deletion in the in-flight count ref synchronously — the
-      // sync-from-state effect only runs after React commits, and a
-      // savePreset between delete and commit would otherwise see the ref
-      // still at MAX and falsely reject.
-      if (next.length !== prev.length) {
-        inFlightCountRef.current = Math.max(0, inFlightCountRef.current - 1);
-      }
-      return next;
-    });
+    // Set.delete is idempotent — even if React invokes the setter's updater
+    // multiple times under StrictMode / concurrent retries, the side effect
+    // here runs exactly once because we mutate the ref BEFORE scheduling
+    // state. The set membership is the source of truth for capacity.
+    if (!presetIdsRef.current.delete(id)) return;
+    setCustomPresets((prev) => prev.filter((p) => p.id !== id));
   }, []);
 
   return { customPresets, savePreset, renamePreset, deletePreset };
