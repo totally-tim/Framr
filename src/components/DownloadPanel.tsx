@@ -34,10 +34,12 @@ function DownloadPanelImpl({
   const doneCount = images.filter((img) => img.status === 'done').length;
   const errorCount = images.filter((img) => img.status === 'error').length;
 
-  const handleDownloadAll = useCallback(async () => {
+  const handleDownloadAll = useCallback(() => {
     if (results.length === 0) return;
+    // Synchronous calls so we stay inside the click's user-activation window —
+    // iOS Safari blocks saveAs that lands after an async boundary.
     for (const result of results) {
-      await downloadSingle(result.blob, result.filename);
+      downloadSingle(result.blob, result.filename);
     }
     onToast?.(
       results.length === 1 ? 'Download started' : `${results.length} downloads started`,

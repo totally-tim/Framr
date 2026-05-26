@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform);
 const modKey = isMac ? '⌘' : 'Ctrl';
@@ -21,8 +21,16 @@ export function KeyboardShortcutsHelp({ isOpen: controlledOpen, onOpenChange }: 
   const closeBtnRef = useRef<HTMLButtonElement>(null);
   const lastFocusedRef = useRef<HTMLElement | null>(null);
 
-  const open = controlledOpen ?? false;
-  const setOpen = (next: boolean) => onOpenChange?.(next);
+  // Support both controlled and uncontrolled use: when callers pass isOpen +
+  // onOpenChange we honor them; otherwise we manage state internally so the
+  // component still works standalone.
+  const isControlled = controlledOpen !== undefined;
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = (next: boolean) => {
+    if (!isControlled) setInternalOpen(next);
+    onOpenChange?.(next);
+  };
 
   useEffect(() => {
     if (!open) return;

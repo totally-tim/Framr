@@ -271,6 +271,12 @@ export function useImageProcessor() {
       handler.cleanup();
       handler.reject(new Error('Cancelled'));
     }
+    // Terminate the worker so the in-flight image actually stops consuming
+    // CPU/memory — rejecting handlers alone leaves the worker grinding for
+    // seconds on large images, and the next batch would queue behind it.
+    // ensureWorker recreates a fresh worker on the next processImages call.
+    workerRef.current?.terminate();
+    workerRef.current = null;
   }, []);
 
   const resetState = useCallback(() => {

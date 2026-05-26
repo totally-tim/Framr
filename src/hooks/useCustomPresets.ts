@@ -135,10 +135,12 @@ export function useCustomPresets(options: UseCustomPresetsOptions = {}): UseCust
     }
   }, [customPresets]);
 
-  // Multi-tab sync.
+  // Multi-tab sync. Note: removeItem/clear in another tab fires a storage event
+  // with newValue === null — we must reload (loadFromStorage returns []) rather
+  // than skip, otherwise cross-tab deletions never propagate.
   useEffect(() => {
     const handler = (e: StorageEvent) => {
-      if (e.key !== STORAGE_KEY || e.newValue === null) return;
+      if (e.key !== STORAGE_KEY && e.key !== null) return;
       skipNextWrite.current = true;
       setCustomPresets(loadFromStorage());
     };
@@ -155,6 +157,14 @@ export function useCustomPresets(options: UseCustomPresetsOptions = {}): UseCust
     ): Preset | null => {
       const trimmed = name.trim().slice(0, MAX_NAME_LENGTH);
       if (!trimmed) return null;
+      if (customPresets.length >= MAX_PRESET_COUNT) {
+        // Surface failure to the caller instead of silently dropping — otherwise
+        // the dialog closes and the user thinks the preset was saved.
+        const error = new Error(`Preset limit reached (${MAX_PRESET_COUNT}). Delete one to save another.`);
+        console.warn('Framr:', error.message);
+        onPersistErrorRef.current?.(error);
+        return null;
+      }
       const preset: Preset = {
         id: `custom-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         name: trimmed,
@@ -163,13 +173,10 @@ export function useCustomPresets(options: UseCustomPresetsOptions = {}): UseCust
         output,
         isCustom: true,
       };
-      setCustomPresets((prev) => {
-        if (prev.length >= MAX_PRESET_COUNT) return prev;
-        return [...prev, preset];
-      });
+      setCustomPresets((prev) => [...prev, preset]);
       return preset;
     },
-    [],
+    [customPresets.length],
   );
 
   const renamePreset = useCallback((id: string, name: string) => {

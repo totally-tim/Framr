@@ -1,8 +1,13 @@
+import { saveAs } from 'file-saver';
 import type { ProcessingResult } from '../types';
 import { sanitizeOutputBasename } from './imageProcessing';
 
-export async function downloadSingle(blob: Blob, filename: string): Promise<void> {
-  const { saveAs } = await import('file-saver');
+// `file-saver` is imported statically so single-image downloads run
+// synchronously from the click handler — iOS Safari rejects saveAs that
+// runs after an awaited microtask boundary (the user-activation flag has
+// expired). jszip stays dynamic — it's 95KB gz and only the ZIP path needs it.
+
+export function downloadSingle(blob: Blob, filename: string): void {
   saveAs(blob, sanitizeOutputBasename(filename));
 }
 
@@ -11,10 +16,7 @@ export async function downloadAsZip(
   zipFilename: string = 'framr-export.zip',
   onProgress?: (progress: number) => void,
 ): Promise<void> {
-  const [{ default: JSZip }, { saveAs }] = await Promise.all([
-    import('jszip'),
-    import('file-saver'),
-  ]);
+  const { default: JSZip } = await import('jszip');
 
   const zip = new JSZip();
   const usedNames = new Set<string>();
