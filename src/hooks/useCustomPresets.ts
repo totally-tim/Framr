@@ -196,7 +196,17 @@ export function useCustomPresets(options: UseCustomPresetsOptions = {}): UseCust
   }, []);
 
   const deletePreset = useCallback((id: string) => {
-    setCustomPresets((prev) => prev.filter((p) => p.id !== id));
+    setCustomPresets((prev) => {
+      const next = prev.filter((p) => p.id !== id);
+      // Mirror the deletion in the in-flight count ref synchronously — the
+      // sync-from-state effect only runs after React commits, and a
+      // savePreset between delete and commit would otherwise see the ref
+      // still at MAX and falsely reject.
+      if (next.length !== prev.length) {
+        inFlightCountRef.current = Math.max(0, inFlightCountRef.current - 1);
+      }
+      return next;
+    });
   }, []);
 
   return { customPresets, savePreset, renamePreset, deletePreset };

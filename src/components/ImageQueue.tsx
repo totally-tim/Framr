@@ -125,6 +125,10 @@ function ImageQueueImpl({
   }, [onReorderImages]);
 
   const handleRowKeyDown = useCallback((e: React.KeyboardEvent, id: string) => {
+    // Only act when the event originated on the row itself — Enter/Space on
+    // nested Retry / Remove buttons bubbles here, and preventDefault would
+    // swallow the button's native activation.
+    if (e.target !== e.currentTarget) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       onSelect(id);

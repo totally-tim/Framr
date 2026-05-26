@@ -33,6 +33,13 @@ interface PreviewSource {
   height: number;
 }
 
+function formatLocalDate(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 async function decodePreviewBitmap(file: File): Promise<{ bitmap: ImageBitmap; width: number; height: number }> {
   // Render the preview against a downscaled bitmap — full-resolution source can be 50MP and
   // killing every slider tick. Cap the long edge to MAX_PREVIEW_SIZE so canvas redraws stay fast.
@@ -465,7 +472,10 @@ export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBac
                 <>
                   <span className="w-1 h-1 rounded-full bg-paper-400 dark:bg-darkroom-400 flex-shrink-0" aria-hidden="true" />
                   <span className="flex-shrink-0">
-                    {image.exifDate.toISOString().slice(0, 10)}
+                    {/* exifr returns DateTimeOriginal as a Date in the user's
+                        local timezone. Use local components so an evening
+                        capture in UTC-N doesn't display the wrong day. */}
+                    {formatLocalDate(image.exifDate)}
                   </span>
                 </>
               )}

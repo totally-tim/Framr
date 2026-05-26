@@ -221,6 +221,11 @@ export function useImageProcessor() {
 
               timeoutId = setTimeout(() => {
                 cleanup();
+                // The worker is still grinding on the stuck job — workers
+                // process messages serially, so the next image would queue
+                // behind it and cascade into more timeouts. Recycle so the
+                // next iteration's ensureWorker spins up a fresh worker.
+                drainAndRecycleWorker(`Processing timed out after ${IMAGE_TIMEOUT_MS / 1000}s`);
                 reject(new Error(`Processing timed out after ${IMAGE_TIMEOUT_MS / 1000}s`));
               }, IMAGE_TIMEOUT_MS);
 
@@ -275,7 +280,7 @@ export function useImageProcessor() {
 
       return { results };
     },
-    [ensureWorker],
+    [ensureWorker, drainAndRecycleWorker],
   );
 
   const cancelProcessing = useCallback(() => {
