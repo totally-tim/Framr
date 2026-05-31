@@ -226,6 +226,16 @@ export default function App() {
   }, []);
 
   const handleProcess = useCallback(async () => {
+    // Bail BEFORE the optimistic flip when a batch is already running.
+    // Without this, two rapid clicks both read the same pre-commit `images`
+    // closure, both compute the same `optimisticIds`, and the second call's
+    // busy-rollback then flips rows the first call is actually processing
+    // back to 'pending'.
+    if (isProcessing) {
+      addToast('Already processing — wait for the current batch to finish.', 'warning');
+      return;
+    }
+
     const pendingImages = images.filter((img) => img.status === 'pending');
     if (pendingImages.length === 0) return;
 
@@ -306,7 +316,7 @@ export default function App() {
       const more = failures.length > 2 ? ` and ${failures.length - 2} more` : '';
       addToast(`Failed: ${names}${more} — ${failures[0].reason}`, 'error');
     }
-  }, [images, borderSettings, resizeSettings, outputSettings, targetAspectRatio, textOverlay, processImages, addToast]);
+  }, [isProcessing, images, borderSettings, resizeSettings, outputSettings, targetAspectRatio, textOverlay, processImages, addToast]);
 
   const handleCancel = useCallback(() => {
     cancelProcessing();
@@ -347,7 +357,10 @@ export default function App() {
   const selectedImage = images.find((img) => img.id === selectedId) || null;
 
   return (
-    <div className="min-h-screen flex flex-col">
+    // h-screen (not min-h-screen) so the layout is bounded by the viewport —
+    // otherwise a 100% zoom on a 12kpx image pushes the preset/mode bars off
+    // the bottom edge because the page grows past the viewport.
+    <div className="h-screen flex flex-col overflow-hidden">
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-50 focus:px-3 focus:py-2 focus:bg-gray-900 focus:text-white focus:rounded">
         Skip to main content
       </a>
@@ -405,7 +418,7 @@ export default function App() {
               <div className="p-4 border-b">
                 <DropZone onFilesSelected={handleFilesSelected} hasImages={true} />
               </div>
-              <div className="flex-1 overflow-hidden flex flex-col">
+              <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
                 <ImageQueue
                   images={images}
                   selectedId={selectedId}
@@ -450,8 +463,12 @@ export default function App() {
               </div>
             </aside>
 
-            <div className="flex-1 flex flex-col overflow-hidden pb-16 md:pb-0">
-              <div className="flex-1 overflow-hidden">
+            {/* min-h-0 is critical: a flex item's default min-height is auto
+                (intrinsic content height), which lets a large preview canvas
+                push the preset bar off the viewport even with overflow-hidden.
+                Setting min-h-0 lets the flex container actually clip. */}
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden pb-16 md:pb-0">
+              <div className="flex-1 min-h-0 overflow-hidden">
                 <PreviewCanvas
                   image={selectedImage}
                   borderSettings={borderSettings}

@@ -544,7 +544,10 @@ export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBac
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-600 dark:text-gray-300 mr-2 font-mono" aria-label={`Image dimensions ${image.originalWidth} by ${image.originalHeight}`}>
+          {/* Dimensions are already in the caption strip below the canvas.
+              Hide them in the mode bar on mobile so the Fit/100% buttons
+              don't get squeezed (the "100%" label was clipping). */}
+          <span className="hidden sm:inline-block text-xs text-ink-100 dark:text-darkroom-500 mr-2 font-mono" aria-label={`Image dimensions ${image.originalWidth} by ${image.originalHeight}`}>
             {image.originalWidth} × {image.originalHeight}
           </span>
 
