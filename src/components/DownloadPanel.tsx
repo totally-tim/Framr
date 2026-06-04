@@ -90,7 +90,7 @@ function DownloadPanelImpl({
             aria-valuenow={Math.round(progress)}
           >
             <div
-              className="h-full bg-ink-900 dark:bg-paper-50 transition-all duration-300"
+              className="h-full bg-ink-900 dark:bg-paper-50 transition-[width] duration-300"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -173,7 +173,7 @@ function DownloadPanelImpl({
                 aria-valuenow={Math.round(zipProgress)}
               >
                 <div
-                  className="h-full bg-ink-900 dark:bg-paper-50 transition-all duration-150"
+                  className="h-full bg-ink-900 dark:bg-paper-50 transition-[width] duration-150"
                   style={{ width: `${zipProgress}%` }}
                 />
               </div>

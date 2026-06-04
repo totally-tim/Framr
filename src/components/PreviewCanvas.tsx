@@ -22,7 +22,7 @@ type ZoomLevel = 'fit' | '100' | number;
 const PREVIEW_MODES: { value: PreviewMode; label: string }[] = [
   { value: 'processed', label: 'Result' },
   { value: 'original', label: 'Original' },
-  { value: 'side-by-side', label: 'Side by Side' },
+  { value: 'side-by-side', label: 'Split' },
   { value: 'slider', label: 'Slider' },
 ];
 
@@ -368,7 +368,7 @@ export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBac
 
   if (!image) {
     return (
-      <div className="flex items-center justify-center h-full text-ink-100 dark:text-darkroom-500 font-display text-lg italic">
+      <div className="flex items-center justify-center h-full text-ink-100 dark:text-darkroom-500 font-mono text-xs uppercase tracking-[0.18em]">
         <p>Select a negative to preview</p>
       </div>
     );
@@ -505,16 +505,16 @@ export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBac
         )}
       </div>
 
-      <div className="flex items-center justify-between px-4 py-3 border-t bg-paper-50/80 dark:bg-darkroom-100/80 backdrop-blur-sm">
-        <div className="flex items-center gap-2" role="group" aria-label="Preview mode">
-          <div className="flex rounded-lg overflow-hidden border">
+      <div className="flex flex-wrap items-center gap-3 px-4 py-3 border-t bg-paper-50/80 dark:bg-darkroom-100/80 backdrop-blur-sm">
+        <div className="flex min-w-0 flex-wrap items-center gap-2" role="group" aria-label="Preview mode">
+          <div className="flex max-w-full overflow-x-auto rounded-lg border scrollbar-thin">
             {PREVIEW_MODES.map((mode) => (
               <button
                 key={mode.value}
                 type="button"
                 onClick={() => setPreviewMode(mode.value)}
                 className={`
-                  px-3 py-1.5 text-xs font-medium transition-colors min-h-[36px]
+                  px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors min-h-[36px]
                   focus:outline-none focus-visible:ring-2 focus-visible:ring-safelight-500 focus-visible:z-10
                   ${previewMode === mode.value
                     ? 'bg-ink-900 text-paper-50 dark:bg-paper-50 dark:text-ink-900'
@@ -543,11 +543,11 @@ export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBac
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-2">
           {/* Dimensions are already in the caption strip below the canvas.
               Hide them in the mode bar on mobile so the Fit/100% buttons
               don't get squeezed (the "100%" label was clipping). */}
-          <span className="hidden sm:inline-block text-xs text-ink-100 dark:text-darkroom-500 mr-2 font-mono" aria-label={`Image dimensions ${image.originalWidth} by ${image.originalHeight}`}>
+          <span className="hidden xl:inline-block text-xs text-ink-100 dark:text-darkroom-500 mr-2 font-mono" aria-label={`Image dimensions ${image.originalWidth} by ${image.originalHeight}`}>
             {image.originalWidth} × {image.originalHeight}
           </span>
 
@@ -558,7 +558,7 @@ export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBac
                 type="button"
                 onClick={() => setZoom(level)}
                 className={`
-                  px-3 py-1.5 text-xs font-medium transition-colors min-h-[36px]
+                  px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors min-h-[36px]
                   focus:outline-none focus-visible:ring-2 focus-visible:ring-safelight-500 focus-visible:z-10
                   ${zoom === level
                     ? 'bg-ink-900 text-paper-50 dark:bg-paper-50 dark:text-ink-900'

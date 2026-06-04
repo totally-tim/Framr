@@ -38,6 +38,8 @@ coverage/
 
 # Playwright
 .playwright-mcp/
+.playwright-fixtures/
+test-results/
 
 # Agent-only working files (private; do not publish in this public repo)
 agent_docs/

@@ -1,0 +1,19 @@
+{
+  "last_scan": "2026-06-04",
+  "framework": "Vite + React + TypeScript",
+  "font_stack": "Fraunces display, Inter Tight sans, JetBrains Mono mono",
+  "palette": "photographic editorial tokens in src/styles/globals.css and tailwind.config.js",
+  "motion": "motion-cut; no motion library dependency",
+  "spacing": "Tailwind utility scale with custom type, radius, and shadow extensions",
+  "preserve": [
+    "React component boundaries",
+    "Framr upload-preview-process-download IA",
+    "existing typography roles where usable"
+  ],
+  "introduce": [
+    "modern-minimal utilitarian component polish",
+    "responsive layout hardening",
+    "large-image containment checks",
+    "a11y and focus-state cleanup"
+  ]
+}

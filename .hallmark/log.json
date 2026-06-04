@@ -1,0 +1,25 @@
+[
+  {
+    "date": "2026-06-04",
+    "brief": "Framr UI hardening for large-resolution image workflows",
+    "scope": "app",
+    "genre": "modern-minimal",
+    "macrostructure": "Workbench",
+    "theme": "darkroom-minimal",
+    "hallmark": {
+      "pre_emit_critique": {
+        "product_fit": 4,
+        "hierarchy": 4,
+        "efficiency": 4,
+        "states": 4,
+        "responsiveness": 4,
+        "visual_distinctiveness": 4
+      },
+      "changes": [
+        "Moved dense desktop workbench chrome to the lg breakpoint so tablet widths use the mobile drawer workflow.",
+        "Kept large-image preview and zoom controls viewport-bounded at 100dvh.",
+        "Reduced broad transitions, clipped preset labels, and decorative empty-state styling."
+      ]
+    }
+  }
+]

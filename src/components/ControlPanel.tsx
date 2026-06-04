@@ -238,7 +238,7 @@ function ControlPanelImpl({
                     type="button"
                     onClick={() => handlePresetColorClick(preset.value)}
                     className={`
-                      relative w-9 h-9 rounded border-2 transition-all
+                      relative w-9 h-9 rounded border-2 transition-transform duration-150
                       focus:outline-none focus-visible:ring-2 focus-visible:ring-safelight-500 focus-visible:ring-offset-2
                       ${active
                         ? 'ring-2 ring-ink-900 dark:ring-paper-50 ring-offset-2 dark:ring-offset-darkroom-100'
@@ -290,7 +290,7 @@ function ControlPanelImpl({
                       gradientStops: preset.stops,
                       gradientAngle: preset.angle,
                     })}
-                    className="w-8 h-8 rounded border-2 hover:scale-110 transition-all border-gray-300 dark:border-gray-600"
+                    className="w-8 h-8 rounded border-2 hover:scale-110 transition-transform duration-150 border-gray-300 dark:border-gray-600"
                     style={{
                       background: preset.mode === 'linear-gradient'
                         ? `linear-gradient(${preset.angle}deg, ${preset.stops.map((s) => `${s.color} ${s.position}%`).join(', ')})`
@@ -437,7 +437,7 @@ function ControlPanelImpl({
                     type="button"
                     onClick={() => handleCanvasBgPresetClick(preset.value)}
                     className={`
-                      w-9 h-9 rounded border-2 transition-all
+                      w-9 h-9 rounded border-2 transition-transform duration-150
                       focus:outline-none focus-visible:ring-2 focus-visible:ring-safelight-500 focus-visible:ring-offset-2
                       ${active
                         ? 'ring-2 ring-ink-900 dark:ring-paper-50 ring-offset-2 dark:ring-offset-darkroom-100'

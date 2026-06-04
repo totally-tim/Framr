@@ -125,7 +125,7 @@ export function DropZone({ onFilesSelected, disabled = false, hasImages = false 
         onPaste={handlePaste}
         className={`
           relative flex items-center gap-3 px-4 py-3
-          border border-dashed transition-all duration-200
+          border border-dashed transition-colors duration-200
           ${isDragging
             ? 'border-safelight-500 bg-safelight-50 dark:bg-safelight-700/10 drop-zone-active'
             : 'border-paper-400 dark:border-darkroom-400 hover:border-ink-100 dark:hover:border-darkroom-500 hover:bg-paper-100 dark:hover:bg-darkroom-200/50'
@@ -185,7 +185,7 @@ export function DropZone({ onFilesSelected, disabled = false, hasImages = false 
       onDrop={handleDrop}
       onPaste={handlePaste}
       className={`
-        relative transition-all duration-300
+        relative transition-colors duration-300
         ${disabled ? 'opacity-50' : ''}
       `}
     >

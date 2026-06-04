@@ -72,7 +72,7 @@ export function MobileDrawer({ isOpen, onClose, title, children }: MobileDrawerP
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 md:hidden">
+    <div className="fixed inset-0 z-50 lg:hidden">
       <div
         className="absolute inset-0 bg-black/50 transition-opacity"
         onClick={onClose}

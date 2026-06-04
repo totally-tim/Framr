@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useId } from 'react';
 import type { TextOverlaySettings, TextPosition, FontMeta, DateStampFormat, TextEffect } from '../types';
 import {
   CURATED_FONTS,
@@ -39,6 +39,18 @@ const POSITION_GRID: { value: TextPosition; label: string }[][] = [
   ],
 ];
 
+const POSITION_LABELS: Record<TextPosition, string> = {
+  'top-left': 'Top left',
+  'top-center': 'Top center',
+  'top-right': 'Top right',
+  'middle-left': 'Middle left',
+  'middle-center': 'Middle center',
+  'middle-right': 'Middle right',
+  'bottom-left': 'Bottom left',
+  'bottom-center': 'Bottom center',
+  'bottom-right': 'Bottom right',
+};
+
 export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOverlayControlsProps) {
   const [showSection, setShowSection] = useState(false);
   const [overlayColorInput, setOverlayColorInput] = useState(textOverlay.color);
@@ -46,6 +58,8 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
   const [fontCategory, setFontCategory] = useState<FontCategory>('all');
   const [showDateFormat, setShowDateFormat] = useState(false);
   const [recentFonts, setRecentFonts] = useState<string[]>(getRecentFonts);
+  const sectionId = useId();
+  const textInputId = useId();
 
   // Sync color inputs when prop changes externally (e.g. preset applied)
   const [prevColor, setPrevColor] = useState(textOverlay.color);
@@ -156,7 +170,10 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
   return (
     <div className="border-t pt-4">
       <button
+        type="button"
         onClick={() => setShowSection(!showSection)}
+        aria-expanded={showSection}
+        aria-controls={sectionId}
         className="flex items-center justify-between w-full py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
       >
         <span>Text Overlay</span>
@@ -171,11 +188,15 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
       </button>
 
       {showSection && (
-        <div className="mt-4 space-y-4">
+        <div id={sectionId} className="mt-4 space-y-4">
           {/* A) Enable toggle */}
           <div className="flex items-center justify-between">
-            <label className="text-sm text-gray-600 dark:text-gray-300">Enable</label>
+            <span className="text-sm text-gray-600 dark:text-gray-300">Enable</span>
             <button
+              type="button"
+              role="switch"
+              aria-checked={textOverlay.enabled}
+              aria-label="Enable text overlay"
               onClick={() => onChange({ ...textOverlay, enabled: !textOverlay.enabled })}
               className={`relative w-11 h-6 rounded-full transition-colors ${textOverlay.enabled ? 'bg-ink-900 dark:bg-paper-50' : 'bg-gray-300 dark:bg-gray-600'}`}
             >
@@ -187,8 +208,9 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
             <>
               {/* B) Text input */}
               <div className="space-y-1">
-                <label className="text-xs text-gray-500 dark:text-gray-400">Text</label>
+                <label htmlFor={textInputId} className="text-xs text-gray-500 dark:text-gray-400">Overlay text</label>
                 <input
+                  id={textInputId}
                   type="text"
                   value={textOverlay.text}
                   onChange={(e) => onChange({ ...textOverlay, text: e.target.value })}
@@ -202,6 +224,7 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
                 <label className="text-xs text-gray-500 dark:text-gray-400">Quick Fill</label>
                 <div className="flex gap-2">
                   <button
+                    type="button"
                     onClick={handleFilmCameraDate}
                     className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs rounded border bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                     title={exifDate ? `EXIF date: ${exifDate.toLocaleDateString()}` : 'No EXIF date — will use today'}
@@ -213,6 +236,7 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
                     Film Camera Date
                   </button>
                   <button
+                    type="button"
                     onClick={handleTodayDate}
                     className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs rounded border bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   >
@@ -245,6 +269,7 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
                 <div className="flex items-center justify-between">
                   <label className="text-xs text-gray-500 dark:text-gray-400">Font Family</label>
                   <button
+                    type="button"
                     onClick={handleRandomFont}
                     className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                     title="Random font"
@@ -259,6 +284,7 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
                 <div className="flex rounded-lg overflow-hidden border">
                   {FONT_CATEGORIES.map((cat) => (
                     <button
+                      type="button"
                       key={cat.value}
                       onClick={() => setFontCategory(cat.value)}
                       className={`flex-1 py-1 text-[10px] font-medium transition-colors ${
@@ -335,6 +361,7 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
                   <div className="flex gap-1 flex-wrap">
                     {availableWeights.map((w) => (
                       <button
+                        type="button"
                         key={w.weight}
                         disabled={availableWeights.length === 1}
                         onClick={() => {
@@ -362,8 +389,11 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
                 <div className="grid grid-cols-3 gap-1 w-fit">
                   {POSITION_GRID.flat().map((cell) => (
                     <button
+                      type="button"
                       key={cell.value}
                       onClick={() => onChange({ ...textOverlay, position: cell.value })}
+                      aria-label={POSITION_LABELS[cell.value]}
+                      title={POSITION_LABELS[cell.value]}
                       className={`w-10 h-8 text-[10px] font-medium rounded transition-colors ${
                         textOverlay.position === cell.value
                           ? 'bg-ink-900 text-paper-50 dark:bg-paper-50 dark:text-ink-900'
@@ -396,8 +426,12 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
               {/* F) Color section */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs text-gray-500 dark:text-gray-400">Auto Contrast Color</label>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">Auto Contrast Color</span>
                   <button
+                    type="button"
+                    role="switch"
+                    aria-checked={textOverlay.useAutoColor}
+                    aria-label="Use auto contrast text color"
                     onClick={() => onChange({ ...textOverlay, useAutoColor: !textOverlay.useAutoColor })}
                     className={`relative w-9 h-5 rounded-full transition-colors ${textOverlay.useAutoColor ? 'bg-ink-900 dark:bg-paper-50' : 'bg-gray-300 dark:bg-gray-600'}`}
                   >
@@ -411,12 +445,13 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
                     <div className="flex flex-wrap gap-1.5">
                       {TEXT_COLOR_PRESETS.map((preset) => (
                         <button
+                          type="button"
                           key={preset.value}
                           onClick={() => {
                             setOverlayColorInput(preset.value);
                             onChange({ ...textOverlay, color: preset.value });
                           }}
-                          className={`w-6 h-6 rounded-full border-2 transition-all ${
+                          className={`w-6 h-6 rounded-full border-2 transition-transform duration-150 ${
                             textOverlay.color === preset.value
                               ? 'ring-2 ring-ink-900 dark:ring-paper-50 ring-offset-1 dark:ring-offset-darkroom-100'
                               : 'hover:scale-110'
@@ -468,8 +503,12 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
               {/* G) Text Shadow */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs text-gray-500 dark:text-gray-400">Text Shadow</label>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">Text Shadow</span>
                   <button
+                    type="button"
+                    role="switch"
+                    aria-checked={textOverlay.textShadow.enabled}
+                    aria-label="Enable text shadow"
                     onClick={() => onChange({
                       ...textOverlay,
                       textShadow: { ...textOverlay.textShadow, enabled: !textOverlay.textShadow.enabled },
@@ -483,8 +522,12 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
                 {textOverlay.textShadow.enabled && (
                   <div className="space-y-2 pl-2 border-l-2 border-safelight-500/40">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs text-gray-500 dark:text-gray-400">Auto Color</label>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">Auto Color</span>
                       <button
+                        type="button"
+                        role="switch"
+                        aria-checked={textOverlay.textShadow.useAutoColor}
+                        aria-label="Use auto shadow color"
                         onClick={() => onChange({
                           ...textOverlay,
                           textShadow: { ...textOverlay.textShadow, useAutoColor: !textOverlay.textShadow.useAutoColor },
@@ -609,6 +652,7 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
                     { value: 'film-burn' as TextEffect, label: 'Film Burn' },
                   ]).map((opt) => (
                     <button
+                      type="button"
                       key={opt.value}
                       onClick={() => onChange({ ...textOverlay, textEffect: opt.value })}
                       className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
@@ -676,6 +720,7 @@ function FontOption({ font, isSelected, onSelect }: {
 
   return (
     <button
+      type="button"
       data-font-name={font.name}
       onClick={() => onSelect(font)}
       className={`w-full text-left px-2 py-1.5 text-sm transition-colors ${

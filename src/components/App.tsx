@@ -357,10 +357,10 @@ export default function App() {
   const selectedImage = images.find((img) => img.id === selectedId) || null;
 
   return (
-    // h-screen (not min-h-screen) so the layout is bounded by the viewport —
-    // otherwise a 100% zoom on a 12kpx image pushes the preset/mode bars off
-    // the bottom edge because the page grows past the viewport.
-    <div className="h-screen flex flex-col overflow-hidden">
+    // 100dvh bounds the app to the visible viewport, including mobile browser
+    // chrome changes, so a 100% zoom on a large image cannot push controls off
+    // the bottom edge.
+    <div className="h-[100dvh] flex flex-col overflow-hidden">
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-50 focus:px-3 focus:py-2 focus:bg-gray-900 focus:text-white focus:rounded">
         Skip to main content
       </a>
@@ -386,7 +386,7 @@ export default function App() {
             Framr
           </h1>
           <span
-            className="hidden md:inline-block text-2xs uppercase tracking-[0.2em] text-ink-100 dark:text-darkroom-500 font-mono"
+            className="hidden lg:inline-block text-2xs uppercase tracking-[0.2em] text-ink-100 dark:text-darkroom-500 font-mono"
             aria-hidden="true"
           >
             — borders for photographers
@@ -402,7 +402,7 @@ export default function App() {
         </div>
       </header>
 
-      <main id="main" className="flex-1 flex flex-col md:flex-row overflow-hidden">
+      <main id="main" className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {!hasImages ? (
           <div className="flex-1 flex items-center justify-center p-4 md:p-8">
             <div className="w-full max-w-2xl">
@@ -412,7 +412,7 @@ export default function App() {
         ) : (
           <>
             <aside
-              className="hidden md:flex w-80 xl:w-96 border-r bg-paper-50/70 dark:bg-darkroom-100/70 backdrop-blur-sm flex-col overflow-hidden"
+              className="hidden lg:flex w-80 xl:w-96 border-r bg-paper-50/70 dark:bg-darkroom-100/70 backdrop-blur-sm flex-col overflow-hidden"
               aria-label="Images and controls"
             >
               <div className="p-4 border-b">
@@ -467,7 +467,7 @@ export default function App() {
                 (intrinsic content height), which lets a large preview canvas
                 push the preset bar off the viewport even with overflow-hidden.
                 Setting min-h-0 lets the flex container actually clip. */}
-            <div className="flex-1 min-h-0 flex flex-col overflow-hidden pb-16 md:pb-0">
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden pb-16 lg:pb-0">
               <div className="flex-1 min-h-0 overflow-hidden">
                 <PreviewCanvas
                   image={selectedImage}
@@ -480,7 +480,7 @@ export default function App() {
                 />
               </div>
 
-              <div className="hidden md:block px-6 py-5 border-t bg-paper-50/80 dark:bg-darkroom-100/80 backdrop-blur-sm">
+              <div className="hidden lg:block px-6 py-5 border-t bg-paper-50/80 dark:bg-darkroom-100/80 backdrop-blur-sm">
                 <PresetButtons
                   currentBorder={borderSettings}
                   currentResize={resizeSettings}
@@ -597,7 +597,7 @@ export default function App() {
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
 
-      <footer className="hidden md:flex items-center justify-between py-3 px-6 border-t text-xs text-ink-100 dark:text-darkroom-500 bg-paper-50/60 dark:bg-darkroom-100/60 backdrop-blur-sm">
+      <footer className="hidden lg:flex items-center justify-between py-3 px-6 border-t text-xs text-ink-100 dark:text-darkroom-500 bg-paper-50/60 dark:bg-darkroom-100/60 backdrop-blur-sm">
         <span className="font-mono uppercase tracking-[0.15em]">
           No uploads · 100% on-device
         </span>

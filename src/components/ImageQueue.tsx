@@ -211,7 +211,7 @@ function ImageQueueImpl({
               onKeyDown={(e) => handleRowKeyDown(e, image.id)}
               className={[
                 'group relative flex items-center gap-3 p-2 rounded-lg cursor-grab active:cursor-grabbing',
-                'transition-all duration-150 select-none',
+                'transition-colors duration-150 select-none',
                 'focus:outline-none focus-visible:ring-2 focus-visible:ring-safelight-500',
                 isDropTarget ? 'border-t-2 border-ink-900 dark:border-paper-50' : 'border-t-2 border-transparent',
                 isDragged ? 'opacity-40' : 'opacity-100',
@@ -267,7 +267,7 @@ function ImageQueueImpl({
                   <button
                     type="button"
                     onClick={(e) => handleRetry(e, image.id)}
-                    className="flex-shrink-0 p-1.5 rounded-md text-xs text-safelight-600 dark:text-safelight-400 hover:bg-paper-100 dark:hover:bg-darkroom-200 opacity-100 transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-safelight-500"
+                    className="flex-shrink-0 p-1.5 rounded-md text-xs text-safelight-600 dark:text-safelight-400 hover:bg-paper-100 dark:hover:bg-darkroom-200 opacity-100 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-safelight-500"
                     aria-label={`Retry ${image.name}`}
                     title="Retry"
                   >
@@ -279,7 +279,7 @@ function ImageQueueImpl({
                 <button
                   type="button"
                   onClick={(e) => handleRemove(e, image.id)}
-                  className="flex-shrink-0 p-2 rounded-full opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-safelight-500"
+                  className="flex-shrink-0 p-2 rounded-full opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 hover:bg-gray-200 dark:hover:bg-gray-700 transition-opacity duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-safelight-500"
                   aria-label={`Remove ${image.name}`}
                 >
                   <svg className="w-4 h-4 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -301,7 +301,7 @@ function ImageQueueImpl({
             hover:border-ink-100 dark:hover:border-darkroom-500
             hover:bg-paper-100/50 dark:hover:bg-darkroom-200/50
             text-2xs font-mono uppercase tracking-[0.18em] text-ink-100 dark:text-darkroom-500 hover:text-ink-600 dark:hover:text-paper-100
-            transition-all duration-150
+            transition-colors duration-150
             focus:outline-none focus-visible:ring-2 focus-visible:ring-safelight-500 focus-visible:ring-offset-2"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">

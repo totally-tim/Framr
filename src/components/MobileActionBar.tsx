@@ -31,7 +31,7 @@ function MobileActionBarImpl({
   const hasImages = images.length > 0;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 md:hidden bg-white dark:bg-gray-900 border-t shadow-lg safe-bottom z-40">
+    <div className="fixed bottom-0 left-0 right-0 lg:hidden bg-white dark:bg-gray-900 border-t shadow-lg safe-bottom z-40">
       {isProcessing && (
         <div aria-live="polite">
           <div
@@ -43,7 +43,7 @@ function MobileActionBarImpl({
             aria-valuenow={Math.round(progress)}
           >
             <div
-              className="h-full bg-ink-900 dark:bg-paper-50 transition-all duration-300"
+              className="h-full bg-ink-900 dark:bg-paper-50 transition-[width] duration-300"
               style={{ width: `${progress}%` }}
             />
           </div>

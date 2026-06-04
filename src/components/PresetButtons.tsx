@@ -77,6 +77,11 @@ const SOCIAL_PRESETS: SocialPreset[] = [
   { id: 'tiktok',       name: '9:16', platform: 'TikTok',     targetAspectRatio: { width: 9, height: 16 }, description: 'TikTok vertical' },
 ];
 
+function formatQuickPresetLabel(preset: Preset): string {
+  const color = preset.border.color.toLowerCase() === '#ffffff' ? 'W' : 'B';
+  return `${color} ${preset.border.width}%`;
+}
+
 function PresetButtonsImpl({ currentBorder, currentResize, currentOutput, onApply, onToast }: PresetButtonsProps) {
   const handlePersistError = useCallback((err: Error) => {
     onToast?.(`Couldn't save preset — ${err.message}`, 'error');
@@ -175,7 +180,7 @@ function PresetButtonsImpl({ currentBorder, currentResize, currentOutput, onAppl
         <h3 className="font-mono text-2xs uppercase tracking-[0.2em] text-ink-100 dark:text-darkroom-500 mb-3">
           Quick Frames
         </h3>
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-2" role="group" aria-label="Quick border presets">
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2" role="group" aria-label="Quick border presets">
           {DEFAULT_PRESETS.map((preset) => {
             const active = isDefaultActive(preset);
             const widthRatio = preset.border.width / 25;
@@ -186,7 +191,7 @@ function PresetButtonsImpl({ currentBorder, currentResize, currentOutput, onAppl
                 type="button"
                 onClick={() => onApply(preset.border)}
                 className={`
-                  group relative flex flex-col gap-1.5 p-1.5 transition-all
+                  group relative flex flex-col gap-1.5 p-1.5 transition-colors duration-150
                   focus:outline-none border
                   ${active
                     ? 'border-ink-900 dark:border-paper-50 bg-paper-50 dark:bg-darkroom-200 shadow-print dark:shadow-print-dark'
@@ -210,8 +215,8 @@ function PresetButtonsImpl({ currentBorder, currentResize, currentOutput, onAppl
                   />
                 </div>
                 <div className="flex items-center justify-between gap-1">
-                  <span className={`font-mono text-2xs uppercase tracking-wider truncate ${active ? 'text-ink-900 dark:text-paper-50' : 'text-ink-600 dark:text-paper-100'}`}>
-                    {preset.name}
+                  <span className={`font-mono text-2xs uppercase tracking-wider whitespace-nowrap ${active ? 'text-ink-900 dark:text-paper-50' : 'text-ink-600 dark:text-paper-100'}`}>
+                    {formatQuickPresetLabel(preset)}
                   </span>
                   {active && (
                     <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isWhite ? 'bg-ink-900 dark:bg-paper-50' : 'bg-safelight-500'}`} aria-hidden="true" />
@@ -227,7 +232,7 @@ function PresetButtonsImpl({ currentBorder, currentResize, currentOutput, onAppl
         <h3 className="font-mono text-2xs uppercase tracking-[0.2em] text-ink-100 dark:text-darkroom-500 mb-3">
           Aspect Ratios
         </h3>
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-2" role="group" aria-label="Social media aspect-ratio presets">
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2" role="group" aria-label="Social media aspect-ratio presets">
           {SOCIAL_PRESETS.map((preset) => {
             const aspectStyle = preset.targetAspectRatio.width / preset.targetAspectRatio.height;
             const w = aspectStyle >= 1 ? 32 : Math.round(32 * aspectStyle);
@@ -237,7 +242,7 @@ function PresetButtonsImpl({ currentBorder, currentResize, currentOutput, onAppl
                 key={preset.id}
                 type="button"
                 onClick={() => onApply(SOCIAL_BORDER, undefined, undefined, preset.targetAspectRatio)}
-                className="group flex items-center gap-2 p-2 transition-all border border-paper-300 dark:border-darkroom-300 bg-paper-50/50 dark:bg-darkroom-100/50 hover:border-ink-100 dark:hover:border-darkroom-500 hover:bg-paper-50 dark:hover:bg-darkroom-200 focus:outline-none"
+                className="group flex items-center gap-2 p-2 transition-colors duration-150 border border-paper-300 dark:border-darkroom-300 bg-paper-50/50 dark:bg-darkroom-100/50 hover:border-ink-100 dark:hover:border-darkroom-500 hover:bg-paper-50 dark:hover:bg-darkroom-200 focus:outline-none"
                 title={preset.description}
                 aria-label={`${preset.platform} ${preset.name}`}
               >
@@ -250,7 +255,7 @@ function PresetButtonsImpl({ currentBorder, currentResize, currentOutput, onAppl
                   <span className="font-mono text-2xs uppercase tracking-wider text-ink-600 dark:text-paper-100">
                     {preset.name}
                   </span>
-                  <span className="text-2xs text-ink-100 dark:text-darkroom-500 truncate">
+                  <span className="max-w-full text-2xs text-ink-100 dark:text-darkroom-500 truncate">
                     {preset.platform}
                   </span>
                 </span>
@@ -310,7 +315,7 @@ function PresetButtonsImpl({ currentBorder, currentResize, currentOutput, onAppl
         )}
 
         {customPresets.length === 0 && !showSaveInput ? (
-          <p className="text-xs text-ink-100 dark:text-darkroom-500 italic font-serif">
+          <p className="text-xs text-ink-100 dark:text-darkroom-500">
             No saved frames yet. Click &quot;Save current&quot; to add one.
           </p>
         ) : (
@@ -321,7 +326,7 @@ function PresetButtonsImpl({ currentBorder, currentResize, currentOutput, onAppl
                 <div
                   key={preset.id}
                   className={`
-                    flex items-center gap-1 pl-2.5 pr-1 py-1 text-sm border transition-all
+                    flex items-center gap-1 pl-2.5 pr-1 py-1 text-sm border transition-colors duration-150
                     ${active
                       ? 'bg-safelight-500 border-safelight-500 text-paper-50 shadow-print dark:shadow-print-dark'
                       : 'bg-paper-50/60 dark:bg-darkroom-200/60 border-safelight-400/40 dark:border-safelight-500/30 text-ink-900 dark:text-paper-50 hover:bg-safelight-50 dark:hover:bg-safelight-700/10'
