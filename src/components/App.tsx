@@ -367,7 +367,8 @@ export default function App() {
           }
           e.target.value = '';
         }}
-        className="sr-only"
+        className="hidden"
+        tabIndex={-1}
         aria-label="Add images"
       />
 

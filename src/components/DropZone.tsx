@@ -108,9 +108,9 @@ export function DropZone({ onFilesSelected, disabled = false, hasImages = false 
       accept="image/jpeg,image/png,image/tiff,image/webp,.jpg,.jpeg,.png,.tiff,.tif,.webp"
       multiple
       onChange={handleInputChange}
-      className="sr-only"
+      className="hidden"
+      tabIndex={-1}
       disabled={disabled}
-      aria-describedby={`${descId}${error ? ` ${errorId}` : ''}`}
     />
   );
 
@@ -140,6 +140,7 @@ export function DropZone({ onFilesSelected, disabled = false, hasImages = false 
           tabIndex={disabled ? -1 : 0}
           className={`absolute inset-0 cursor-pointer ${disabled ? 'cursor-not-allowed' : ''} focus:outline-none`}
           aria-label="Add more images"
+          aria-describedby={`${descId}${error ? ` ${errorId}` : ''}`}
         >
           <span className="sr-only">Add more images</span>
         </label>
@@ -196,6 +197,7 @@ export function DropZone({ onFilesSelected, disabled = false, hasImages = false 
         tabIndex={disabled ? -1 : 0}
         className={`absolute inset-0 z-20 cursor-pointer ${disabled ? 'cursor-not-allowed' : ''} focus:outline-none focus-visible:ring-2 focus-visible:ring-safelight-500 focus-visible:ring-offset-4`}
         aria-label="Drop images here, or click to browse"
+        aria-describedby={`${descId}${error ? ` ${errorId}` : ''}`}
       >
         <span className="sr-only">Drop images here, or click to browse</span>
       </label>

@@ -21,4 +21,13 @@ describe('review-comment regressions', () => {
     expect(config).toMatch(/zip:\s*\[\s*['"]jszip['"]\s*\]/);
     expect(config).not.toMatch(/zip:\s*\[[^\]]*['"]file-saver['"]/);
   });
+
+  test('the programmatic top-level file picker is hidden from keyboard tab order', () => {
+    const appSource = readRootFile('src/components/App.tsx');
+
+    const topLevelPicker = appSource.match(/<input\s+ref=\{fileInputRef\}[\s\S]*?\/>/)?.[0] ?? '';
+    expect(topLevelPicker).toContain('className="hidden"');
+    expect(topLevelPicker).toContain('tabIndex={-1}');
+    expect(topLevelPicker).not.toContain('className="sr-only"');
+  });
 });
