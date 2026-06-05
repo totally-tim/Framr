@@ -367,6 +367,12 @@ export function PreviewCanvas({ image, borderSettings, resizeSettings, canvasBac
   }, [image, onToast]);
 
   if (!image) {
+    renderTokenRef.current += 1;
+    if (previewSourceRef.current) {
+      previewSourceRef.current.bitmap.close();
+      previewSourceRef.current = null;
+    }
+
     return (
       <div className="flex items-center justify-center h-full text-ink-100 dark:text-darkroom-500 font-mono text-xs uppercase tracking-[0.18em]">
         <p>Select a negative to preview</p>

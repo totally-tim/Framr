@@ -292,15 +292,6 @@ export default function App() {
     );
 
     if (rejected === 'busy') {
-      // Roll back only the rows this click flipped — don't disturb the image
-      // an earlier batch is genuinely working on.
-      setImages((prev) =>
-        prev.map((img) =>
-          optimisticIds.has(img.id) && img.status === 'processing'
-            ? { ...img, status: 'pending' }
-            : img,
-        ),
-      );
       addToast('Already processing — wait for the current batch to finish.', 'warning');
       return;
     }

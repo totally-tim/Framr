@@ -45,7 +45,6 @@ export function useImageProcessor() {
   const isProcessingRef = useRef(false);
   const currentBatchIdRef = useRef<string>('');
   const pendingHandlersRef = useRef<Set<PendingHandler>>(new Set());
-  const fontFallbackToastRef = useRef<((msg: string) => void) | null>(null);
 
   // Reject every pending handler and force a fresh worker on next call.
   // Used by both onerror (uncaught exception) and onmessageerror
@@ -117,7 +116,6 @@ export function useImageProcessor() {
       isProcessingRef.current = true;
       cancelledRef.current = false;
       currentBatchIdRef.current = batchId;
-      fontFallbackToastRef.current = onWarning ?? null;
 
       setState({
         isProcessing: true,

@@ -26,7 +26,6 @@ export default defineConfig({
       name: 'chrome-desktop',
       use: {
         ...devices['Desktop Chrome'],
-        channel: 'chrome',
         viewport: { width: 1440, height: 920 },
       },
     },
@@ -35,7 +34,6 @@ export default defineConfig({
       use: {
         ...devices['iPhone SE'],
         browserName: 'chromium',
-        channel: 'chrome',
         viewport: { width: 320, height: 568 },
       },
     },
@@ -44,7 +42,6 @@ export default defineConfig({
       use: {
         ...devices['iPhone 12'],
         browserName: 'chromium',
-        channel: 'chrome',
         viewport: { width: 375, height: 667 },
       },
     },
@@ -53,7 +50,6 @@ export default defineConfig({
       use: {
         ...devices['iPhone 12 Pro Max'],
         browserName: 'chromium',
-        channel: 'chrome',
         viewport: { width: 414, height: 736 },
       },
     },
@@ -62,7 +58,6 @@ export default defineConfig({
       use: {
         ...devices['iPad Mini'],
         browserName: 'chromium',
-        channel: 'chrome',
         viewport: { width: 768, height: 1024 },
       },
     },

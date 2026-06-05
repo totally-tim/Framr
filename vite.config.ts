@@ -38,7 +38,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
-          zip: ['jszip', 'file-saver']
+          zip: ['jszip']
         }
       }
     }
