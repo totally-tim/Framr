@@ -57,6 +57,31 @@ export function MobileDrawer({ isOpen, onClose, title, children }: MobileDrawerP
     };
   }, [isOpen]);
 
+  /* `isOpen` is not a function of viewport width, so crossing into the desktop
+     layout - a phone rotating to an 844px landscape, say - hides the wrapper
+     with `md:hidden` while everything this component runs against it stays
+     live. The scroll lock above holds on a body nothing is covering, and the
+     Tab trap below runs against a `display: none` panel where every candidate
+     has a zero box: `focusableWithin` comes back empty, so each Tab is
+     prevented and sent to a panel that cannot take focus, and the desktop UI
+     is keyboard-dead until someone presses Escape. A drawer that is no longer
+     displayed is closed - one fix for all three, rather than teaching each
+     effect to check. */
+  useEffect(() => {
+    if (!isOpen) return;
+    // 48rem is Tailwind's `md`, the breakpoint the wrapper's `md:hidden` uses.
+    const desktop = window.matchMedia('(min-width: 48rem)');
+    if (desktop.matches) {
+      onClose();
+      return;
+    }
+    const handleChange = (e: MediaQueryListEvent) => {
+      if (e.matches) onClose();
+    };
+    desktop.addEventListener('change', handleChange);
+    return () => desktop.removeEventListener('change', handleChange);
+  }, [isOpen, onClose]);
+
   /* `aria-modal` is a promise about focus, and the markup alone keeps none of
      it. Focus moves to the panel on open, cannot leave it while open, and goes
      back to whatever opened the drawer on close. The panel rather than its

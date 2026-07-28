@@ -88,6 +88,13 @@ export function DropZone({ onFilesSelected, disabled = false, hasImages = false 
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (disabled) return;
+    // Cmd/Ctrl+Enter is Process, and it stays global so it fires wherever focus
+    // sits - including here. Bailing rather than preventing is the protocol
+    // every control that shares a key with a shortcut follows (see
+    // `useKeyboardShortcuts`, and the queue row's own Enter case): that handler
+    // skips anything already `defaultPrevented`, so opening the file picker
+    // here would swallow a Process the shortcuts help advertises.
+    if (e.metaKey || e.ctrlKey) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       inputRef.current?.click();

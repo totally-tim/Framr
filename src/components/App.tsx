@@ -448,6 +448,12 @@ export default function App() {
               title={`Images (${images.length})`}
             >
               <div className="space-y-4">
+                {/* The only way to append files on mobile. The full-size drop
+                    zone above renders while the queue is empty, and the compact
+                    one lives in an `md:flex` aside, so without this a phone can
+                    add images exactly once and then has to clear the queue to
+                    add more. */}
+                <DropZone onFilesSelected={handleFilesSelected} hasImages={true} />
                 <ImageQueue
                   images={images}
                   selectedId={selectedId}
