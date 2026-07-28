@@ -1,6 +1,9 @@
-import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
+import { useMemo, useState, useRef, useEffect, useCallback, useId } from 'react';
+import type { ReactNode } from 'react';
 import type { AspectRatio, Preset, BorderSettings, ResizeSettings, OutputSettings } from '../types';
 import { useCustomPresets } from '../hooks/useCustomPresets';
+import { Chip, ChipGroup, cx } from './ui';
+import { SECTION_HEADING } from './typography';
 import { DEFAULT_GRADIENT_STOPS } from '../utils/constants';
 
 interface PresetButtonsProps {
@@ -76,6 +79,58 @@ const SOCIAL_PRESETS: SocialPreset[] = [
   { id: 'tiktok',       name: '9:16', platform: 'TikTok',     targetAspectRatio: { width: 9, height: 16 }, description: 'TikTok vertical' },
 ];
 
+/**
+ * A sample of the IMAGE palette - the pigment that lands on the photograph -
+ * shown inside a chrome control.
+ *
+ * It deliberately shares nothing with the chrome selection language. The frame
+ * is a fixed mid neutral: it never becomes the accent hairline, never inherits
+ * the chip's text colour (the old swatch used `border-current`, which let the
+ * chrome bleed into the pigment), and does not change on hover, selection, or
+ * theme. Selecting a preset changes the chip around this square; the square
+ * itself is unaffected, which is what tells the user the two colour systems are
+ * unrelated.
+ *
+ * Token note: the frame is `border-sample-frame`. It used to be `border-muted`,
+ * borrowed because no token existed for the role - the rule colour is tuned to
+ * disappear (that is a divider's job), so a #000000 sample framed in it is
+ * invisible on a dark chip. The gap that comment flagged is now filled, and the
+ * same token frames the two swatches in ControlPanel and TextOverlayControls
+ * that were still on `border-border`. All three sit in one viewport.
+ */
+function ColorSample({ color }: { color: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="h-3.5 w-3.5 shrink-0 rounded-sm border border-sample-frame"
+      style={{ backgroundColor: color }}
+    />
+  );
+}
+
+/** Quiet icon action attached to a custom preset chip. Never hover-only. */
+function PresetIconButton({
+  onClick,
+  title,
+  children,
+}: {
+  onClick: () => void;
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      aria-label={title}
+      className="cursor-pointer rounded-md p-2 text-muted transition-[background-color,color] duration-fast ease-out focus-visible:outline-2 focus-visible:outline-offset-2 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-hover [@media(hover:hover)_and_(pointer:fine)]:hover:text-ink"
+    >
+      {children}
+    </button>
+  );
+}
+
 export function PresetButtons({ currentBorder, currentResize, currentOutput, onApply }: PresetButtonsProps) {
   const { customPresets, savePreset, renamePreset, deletePreset } = useCustomPresets();
   const [saveName, setSaveName] = useState('');
@@ -84,6 +139,9 @@ export function PresetButtons({ currentBorder, currentResize, currentOutput, onA
   const [renameValue, setRenameValue] = useState('');
   const saveInputRef = useRef<HTMLInputElement>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
+  // This component renders twice - the desktop shelf and the mobile drawer - so
+  // the heading ids a ChipGroup points at have to be unique per instance.
+  const headingId = useId();
 
   useEffect(() => {
     if (showSaveInput) saveInputRef.current?.focus();
@@ -150,79 +208,77 @@ export function PresetButtons({ currentBorder, currentResize, currentOutput, onA
   }, []);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {/* Built-in presets */}
       <div>
-        <h3 className="font-medium text-sm text-gray-700 dark:text-gray-200 uppercase tracking-wider mb-2">
+        <h3 id={`${headingId}-quick`} className={cx('mb-2', SECTION_HEADING)}>
           Quick Presets
         </h3>
-        <div className="flex flex-wrap gap-2">
+        <ChipGroup label="Quick presets" labelledBy={`${headingId}-quick`}>
           {DEFAULT_PRESETS.map((preset) => (
-            <button
+            <Chip
               key={preset.id}
+              selected={isDefaultActive(preset)}
               onClick={() => onApply(preset.border)}
-              className={`
-                px-3 py-1.5 text-sm rounded-lg transition-all
-                ${isDefaultActive(preset)
-                  ? 'bg-blue-500 text-white shadow-md'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                }
-              `}
               title={preset.description}
+              leading={<ColorSample color={preset.border.color} />}
             >
-              <span className="flex items-center gap-1.5">
-                <span
-                  className="w-3 h-3 rounded-sm border border-gray-300 dark:border-gray-600"
-                  style={{ backgroundColor: preset.border.color }}
-                />
-                {preset.name}
-              </span>
-            </button>
+              {preset.name}
+            </Chip>
           ))}
-        </div>
+        </ChipGroup>
       </div>
 
-      {/* Social media presets */}
+      {/* Social media presets. These are action chips on purpose: applying one
+          sets a target aspect ratio this component is never told about, so a
+          set of six chips all reporting "not pressed" would be a lie. */}
       <div>
-        <h3 className="font-medium text-sm text-gray-700 dark:text-gray-200 uppercase tracking-wider mb-2">
+        <h3 id={`${headingId}-social`} className={cx('mb-2', SECTION_HEADING)}>
           Social
         </h3>
-        <div className="flex flex-wrap gap-2">
+        <ChipGroup label="Social ratios" labelledBy={`${headingId}-social`}>
           {SOCIAL_PRESETS.map((preset) => (
-            <button
+            <Chip
               key={preset.id}
               onClick={() => onApply(SOCIAL_BORDER, undefined, undefined, preset.targetAspectRatio)}
-              className="px-3 py-1.5 text-sm rounded-lg transition-all bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
               title={preset.description}
+              // A chip caption takes text-micro, same as the font tags in
+              // TextOverlayControls - the two read as one idiom and were split
+              // between 11px and 12px for no reason.
+              leading={<span className="text-micro text-muted">{preset.platform}</span>}
             >
-              <span className="flex items-center gap-1.5">
-                <span className="text-xs text-gray-400 dark:text-gray-500">{preset.platform}</span>
-                <span className="font-medium">{preset.name}</span>
-              </span>
-            </button>
+              {/* Chrome voice, not data voice. `1:1` is the preset's NAME, and
+                  `White 3%` one row above is the same field of the same type -
+                  two names of the same kind cannot take two faces. The data voice
+                  is for a value standing alone in its own element, which is why
+                  the slider readouts and the hex fields keep it. */}
+              {preset.name}
+            </Chip>
           ))}
-        </div>
+        </ChipGroup>
       </div>
 
       {/* Custom presets */}
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="font-medium text-sm text-gray-700 dark:text-gray-200 uppercase tracking-wider">
+        {/* Not justify-between: on the desktop shelf this row is the full width
+            of the app, which would strand the action a thousand pixels from the
+            heading it belongs to. */}
+        <div className="mb-2 flex items-center gap-3">
+          <h3 id={`${headingId}-custom`} className={SECTION_HEADING}>
             My Presets
           </h3>
           {!showSaveInput && (
-            <button
+            <Chip
               onClick={() => setShowSaveInput(true)}
-              className="text-xs px-2 py-1 rounded-md bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
               title="Save current settings as a preset"
             >
               + Save current
-            </button>
+            </Chip>
           )}
         </div>
 
         {showSaveInput && (
-          <div className="flex gap-2 mb-2">
+          <div className="mb-2 flex gap-2">
             <input
               ref={saveInputRef}
               type="text"
@@ -230,42 +286,30 @@ export function PresetButtons({ currentBorder, currentResize, currentOutput, onA
               onChange={(e) => setSaveName(e.target.value)}
               onKeyDown={handleSaveKeyDown}
               placeholder="Preset name…"
-              className="flex-1 text-sm px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              aria-label="Preset name"
+              // Capped: this row is the full width of the desktop shelf, and a
+              // 1100px field for a 40-character name is absurd. Still grows in
+              // the mobile drawer, where the container is narrow.
+              className="input min-w-0 flex-1 max-w-64"
               maxLength={40}
             />
-            <button
-              onClick={handleSave}
-              disabled={!saveName.trim()}
-              className="text-sm px-3 py-1.5 rounded-lg bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
+            <button onClick={handleSave} disabled={!saveName.trim()} className="btn-secondary">
               Save
             </button>
-            <button
-              onClick={() => { setSaveName(''); setShowSaveInput(false); }}
-              className="text-sm px-2.5 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-            >
+            <button onClick={() => { setSaveName(''); setShowSaveInput(false); }} className="btn">
               Cancel
             </button>
           </div>
         )}
 
         {customPresets.length === 0 && !showSaveInput ? (
-          <p className="text-xs text-gray-400 dark:text-gray-500 italic">
-            No saved presets yet. Click &quot;Save current&quot; to add one.
+          <p className="text-xs italic text-muted">
+            No saved presets yet. Click “Save current” to add one.
           </p>
         ) : (
-          <div className="flex flex-wrap gap-2">
+          <ChipGroup label="My presets" labelledBy={`${headingId}-custom`}>
             {customPresets.map((preset) => (
-              <div
-                key={preset.id}
-                className={`
-                  flex items-center gap-1 pl-2.5 pr-1 py-1 rounded-lg text-sm border transition-all
-                  ${isCustomActive(preset)
-                    ? 'bg-violet-500 border-violet-500 text-white shadow-md'
-                    : 'bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-700 text-violet-700 dark:text-violet-300 hover:bg-violet-100 dark:hover:bg-violet-900/40'
-                  }
-                `}
-              >
+              <div key={preset.id} className="flex items-center gap-1">
                 {renamingId === preset.id ? (
                   <input
                     ref={renameInputRef}
@@ -279,47 +323,35 @@ export function PresetButtons({ currentBorder, currentResize, currentOutput, onA
                       }
                       setRenamingId(null);
                     }}
-                    className="text-sm w-28 bg-transparent outline-none border-b border-current"
+                    aria-label={`Rename ${preset.name}`}
+                    className="input w-32"
                     maxLength={40}
                   />
                 ) : (
-                  <button
+                  <Chip
+                    selected={isCustomActive(preset)}
                     onClick={() => onApply(preset.border, preset.resize, preset.output)}
-                    className="flex items-center gap-1.5"
-                    title={`Apply "${preset.name}" — border${preset.resize ? ' + resize' : ''}${preset.output ? ' + output' : ''}`}
+                    title={`Apply “${preset.name}” — border${preset.resize ? ' + resize' : ''}${preset.output ? ' + output' : ''}`}
+                    leading={<ColorSample color={preset.border.color} />}
                   >
-                    <span
-                      className="w-3 h-3 rounded-sm border border-current opacity-70"
-                      style={{ backgroundColor: preset.border.color }}
-                    />
                     {preset.name}
-                  </button>
+                  </Chip>
                 )}
 
-                {/* Rename button */}
-                <button
-                  onClick={() => startRename(preset)}
-                  className="ml-0.5 opacity-60 hover:opacity-100 transition-opacity p-0.5 rounded"
-                  title="Rename"
-                >
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <PresetIconButton onClick={() => startRename(preset)} title={`Rename ${preset.name}`}>
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 2.828L11.828 15.828a2 2 0 01-1.414.586H9v-1.414A2 2 0 019.586 13z" />
                   </svg>
-                </button>
+                </PresetIconButton>
 
-                {/* Delete button */}
-                <button
-                  onClick={() => deletePreset(preset.id)}
-                  className="opacity-60 hover:opacity-100 transition-opacity p-0.5 rounded"
-                  title="Delete preset"
-                >
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <PresetIconButton onClick={() => deletePreset(preset.id)} title={`Delete ${preset.name}`}>
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
-                </button>
+                </PresetIconButton>
               </div>
             ))}
-          </div>
+          </ChipGroup>
         )}
       </div>
     </div>

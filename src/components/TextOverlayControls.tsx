@@ -1,5 +1,6 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
-import type { TextOverlaySettings, TextPosition, FontMeta, DateStampFormat, TextEffect } from '../types';
+import { useState, useCallback, useRef, useEffect, useId } from 'react';
+import type { ReactNode } from 'react';
+import type { TextOverlaySettings, FontMeta, DateStampFormat, TextEffect } from '../types';
 import {
   CURATED_FONTS,
   ALL_FONTS,
@@ -12,8 +13,12 @@ import {
   isGenericFont,
 } from '../utils/fonts';
 import type { FontCategory } from '../utils/fonts';
-import { TEXT_COLOR_PRESETS, isValidHex, normalizeHex } from '../utils/colorUtils';
+import { TEXT_COLOR_PRESETS, isValidHex, isCompleteHex, normalizeHex } from '../utils/colorUtils';
 import { DATE_STAMP_FORMATS, formatDateStamp } from '../utils/dateFormat';
+import { useMountThroughExit } from './motion';
+import { Chip, ChipGroup, PositionGrid, Segment, Switch, cx } from './ui';
+import type { SegmentOption } from './ui';
+import { ACCORDION_TRIGGER, MICRO_LABEL } from './typography';
 
 interface TextOverlayControlsProps {
   textOverlay: TextOverlaySettings;
@@ -21,31 +26,53 @@ interface TextOverlayControlsProps {
   exifDate?: Date;
 }
 
-const POSITION_GRID: { value: TextPosition; label: string }[][] = [
-  [
-    { value: 'top-left', label: 'TL' },
-    { value: 'top-center', label: 'TC' },
-    { value: 'top-right', label: 'TR' },
-  ],
-  [
-    { value: 'middle-left', label: 'ML' },
-    { value: 'middle-center', label: 'MC' },
-    { value: 'middle-right', label: 'MR' },
-  ],
-  [
-    { value: 'bottom-left', label: 'BL' },
-    { value: 'bottom-center', label: 'BC' },
-    { value: 'bottom-right', label: 'BR' },
-  ],
+const FONT_CATEGORY_OPTIONS: readonly SegmentOption<FontCategory>[] = FONT_CATEGORIES.map(
+  (category) => ({ value: category.value, label: category.label }),
+);
+
+const TEXT_EFFECT_OPTIONS: readonly SegmentOption<TextEffect>[] = [
+  { value: 'none', label: 'None' },
+  { value: 'glow', label: 'Glow' },
+  { value: 'film-burn', label: 'Film Burn' },
 ];
 
 export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOverlayControlsProps) {
   const [showSection, setShowSection] = useState(false);
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const section = useMountThroughExit(showSection, sectionRef);
   const [overlayColorInput, setOverlayColorInput] = useState(textOverlay.color);
   const [shadowColorInput, setShadowColorInput] = useState(textOverlay.textShadow.color);
   const [fontCategory, setFontCategory] = useState<FontCategory>('all');
   const [showDateFormat, setShowDateFormat] = useState(false);
   const [recentFonts, setRecentFonts] = useState<string[]>(getRecentFonts);
+
+  // One id root per instance. Every visible label points its control at the
+  // matching id: `htmlFor` for real form controls, `labelledBy` for the ui
+  // primitives, which render buttons that a <label> cannot name.
+  const uid = useId();
+  const id = {
+    enable: `${uid}-enable`,
+    text: `${uid}-text`,
+    quickFill: `${uid}-quick-fill`,
+    dateFormat: `${uid}-date-format`,
+    fontFamily: `${uid}-font-family`,
+    weight: `${uid}-weight`,
+    position: `${uid}-position`,
+    size: `${uid}-size`,
+    autoColor: `${uid}-auto-color`,
+    colorPicker: `${uid}-color-picker`,
+    colorHex: `${uid}-color-hex`,
+    shadow: `${uid}-shadow`,
+    shadowAuto: `${uid}-shadow-auto`,
+    shadowPicker: `${uid}-shadow-picker`,
+    shadowHex: `${uid}-shadow-hex`,
+    blur: `${uid}-blur`,
+    offsetX: `${uid}-offset-x`,
+    offsetY: `${uid}-offset-y`,
+    effect: `${uid}-effect`,
+    intensity: `${uid}-intensity`,
+    opacity: `${uid}-opacity`,
+  };
 
   // Sync color inputs when prop changes externally (e.g. preset applied)
   const [prevColor, setPrevColor] = useState(textOverlay.color);
@@ -107,6 +134,13 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
     onChange({ ...textOverlay, fontFamily: font.name, fontWeight: newWeight });
   }, [textOverlay, onChange]);
 
+  const handleWeightSelect = useCallback((weight: number) => {
+    if (!isGenericFont(textOverlay.fontFamily)) {
+      loadFont(document.fonts, textOverlay.fontFamily, weight);
+    }
+    onChange({ ...textOverlay, fontWeight: weight });
+  }, [textOverlay, onChange]);
+
   const handleRandomFont = useCallback(() => {
     const fonts = fontCategory === 'all'
       ? CURATED_FONTS
@@ -152,519 +186,610 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
 
   const selectedMeta = getFontMeta(textOverlay.fontFamily);
   const availableWeights = selectedMeta?.weights ?? [{ weight: 400, label: 'Regular', url: '' }];
+  const weightOptions: SegmentOption<number>[] = availableWeights.map((w) => ({
+    value: w.weight,
+    label: w.label,
+  }));
 
   return (
-    <div className="border-t pt-4">
+    <div className="border-t border-border pt-4">
       <button
+        type="button"
         onClick={() => setShowSection(!showSection)}
-        className="flex items-center justify-between w-full py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+        aria-expanded={showSection}
+        className={ACCORDION_TRIGGER}
       >
         <span>Text Overlay</span>
         <svg
-          className={`w-4 h-4 transition-transform ${showSection ? 'rotate-180' : ''}`}
+          className={cx(
+            // `transition-[rotate]`, not `transition-transform`: Tailwind v4's
+            // `rotate-180` writes the standalone `rotate` property, so the
+            // broader list would enumerate three properties that never change.
+            // Same chevron, same class as the one in ControlPanel.
+            'size-4 text-muted transition-[rotate] duration-fast ease-out',
+            showSection && 'rotate-180',
+          )}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
+          aria-hidden="true"
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
 
-      {showSection && (
-        <div className="mt-4 space-y-4">
-          {/* A) Enable toggle */}
-          <div className="flex items-center justify-between">
-            <label className="text-sm text-gray-600 dark:text-gray-300">Enable</label>
-            <button
-              onClick={() => onChange({ ...textOverlay, enabled: !textOverlay.enabled })}
-              className={`relative w-11 h-6 rounded-full transition-colors ${textOverlay.enabled ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'}`}
-            >
-              <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${textOverlay.enabled ? 'translate-x-5' : ''}`} />
-            </button>
-          </div>
+      {/* Same accordion mechanism as Advanced Settings in ControlPanel: the
+          track interpolates `grid-template-rows: 0fr -> 1fr`, the content stays
+          in the DOM through the exit, and the margin sits inside the collapsing
+          track so nothing is left behind when it closes. */}
+      {section.mounted && (
+        <div
+          ref={sectionRef}
+          inert={!showSection}
+          className={cx(
+            'grid transition-[grid-template-rows,opacity]',
+            section.shown
+              ? 'grid-rows-[1fr] opacity-100 duration-enter ease-out'
+              : 'grid-rows-[0fr] opacity-0 duration-exit ease-in',
+          )}
+        >
+          <div className={cx('min-h-0', !section.settled && 'overflow-hidden')}>
+            <div className="mt-4 space-y-4">
+              {/* A) Enable toggle */}
+              <ToggleRow
+                labelId={id.enable}
+                label="Enable"
+                checked={textOverlay.enabled}
+                onChange={(enabled) => onChange({ ...textOverlay, enabled })}
+              />
 
-          {textOverlay.enabled && (
-            <>
-              {/* B) Text input */}
-              <div className="space-y-1">
-                <label className="text-xs text-gray-500 dark:text-gray-400">Text</label>
-                <input
-                  type="text"
-                  value={textOverlay.text}
-                  onChange={(e) => onChange({ ...textOverlay, text: e.target.value })}
-                  className="w-full px-3 py-2 text-sm rounded border bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Your text here..."
-                />
-              </div>
-
-              {/* Quick Fill buttons */}
-              <div className="space-y-2">
-                <label className="text-xs text-gray-500 dark:text-gray-400">Quick Fill</label>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleFilmCameraDate}
-                    className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs rounded border bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                    title={exifDate ? `EXIF date: ${exifDate.toLocaleDateString()}` : 'No EXIF date — will use today'}
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    Film Camera Date
-                  </button>
-                  <button
-                    onClick={handleTodayDate}
-                    className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs rounded border bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    Today's Date
-                  </button>
-                </div>
-                {showDateFormat && (
+              {textOverlay.enabled && (
+                <>
+                  {/* B) Text input */}
                   <div className="space-y-1">
-                    <label className="text-xs text-gray-500 dark:text-gray-400">Date Format</label>
-                    <select
-                      value={textOverlay.dateStampFormat}
-                      onChange={(e) => handleDateFormatChange(e.target.value as DateStampFormat)}
-                      className="w-full px-3 py-1.5 text-sm rounded border bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      {DATE_STAMP_FORMATS.map((f) => (
-                        <option key={f.value} value={f.value}>
-                          {f.label} ({f.example})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-
-              {/* C) Font Picker */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs text-gray-500 dark:text-gray-400">Font Family</label>
-                  <button
-                    onClick={handleRandomFont}
-                    className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                    title="Random font"
-                  >
-                    <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                  </button>
-                </div>
-
-                {/* Category tabs */}
-                <div className="flex rounded-lg overflow-hidden border">
-                  {FONT_CATEGORIES.map((cat) => (
-                    <button
-                      key={cat.value}
-                      onClick={() => setFontCategory(cat.value)}
-                      className={`flex-1 py-1 text-[10px] font-medium transition-colors ${
-                        fontCategory === cat.value
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                      }`}
-                    >
-                      {cat.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Font list */}
-                <div
-                  ref={fontListRef}
-                  className="max-h-44 overflow-y-auto border rounded bg-white dark:bg-gray-800 scrollbar-thin"
-                >
-                  {/* Recent fonts */}
-                  {recentFontMetas.length > 0 && fontCategory === 'all' && (
-                    <div>
-                      <div className="px-2 py-1 text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider sticky top-0 bg-white dark:bg-gray-800">
-                        Recent
-                      </div>
-                      {recentFontMetas.map((font) => (
-                        <FontOption
-                          key={`recent-${font.name}`}
-                          font={font}
-                          isSelected={textOverlay.fontFamily === font.name}
-                          onSelect={handleFontSelect}
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Featured fonts */}
-                  {featuredFonts.length > 0 && fontCategory === 'all' && (
-                    <div>
-                      <div className="px-2 py-1 text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider sticky top-0 bg-white dark:bg-gray-800">
-                        Featured
-                      </div>
-                      {featuredFonts.map((font) => (
-                        <FontOption
-                          key={`featured-${font.name}`}
-                          font={font}
-                          isSelected={textOverlay.fontFamily === font.name}
-                          onSelect={handleFontSelect}
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  {/* All / filtered */}
-                  <div>
-                    {fontCategory === 'all' && (
-                      <div className="px-2 py-1 text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider sticky top-0 bg-white dark:bg-gray-800">
-                        All Fonts
-                      </div>
-                    )}
-                    {filteredFonts.map((font) => (
-                      <FontOption
-                        key={font.name}
-                        font={font}
-                        isSelected={textOverlay.fontFamily === font.name}
-                        onSelect={handleFontSelect}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                {/* Weight buttons — always rendered to prevent layout shift */}
-                <div className="space-y-1">
-                  <label className="text-xs text-gray-500 dark:text-gray-400">Weight</label>
-                  <div className="flex gap-1 flex-wrap">
-                    {availableWeights.map((w) => (
-                      <button
-                        key={w.weight}
-                        disabled={availableWeights.length === 1}
-                        onClick={() => {
-                          if (!isGenericFont(textOverlay.fontFamily)) {
-                            loadFont(document.fonts, textOverlay.fontFamily, w.weight);
-                          }
-                          onChange({ ...textOverlay, fontWeight: w.weight });
-                        }}
-                        className={`px-2 py-1 text-xs rounded border transition-colors ${
-                          textOverlay.fontWeight === w.weight
-                            ? 'bg-blue-500 text-white border-blue-500'
-                            : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
-                        } disabled:opacity-60 disabled:cursor-default`}
-                      >
-                        {w.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* D) Position Grid */}
-              <div className="space-y-2">
-                <label className="text-xs text-gray-500 dark:text-gray-400">Position</label>
-                <div className="grid grid-cols-3 gap-1 w-fit">
-                  {POSITION_GRID.flat().map((cell) => (
-                    <button
-                      key={cell.value}
-                      onClick={() => onChange({ ...textOverlay, position: cell.value })}
-                      className={`w-10 h-8 text-[10px] font-medium rounded transition-colors ${
-                        textOverlay.position === cell.value
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      {cell.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* E) Font Size slider */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs text-gray-500 dark:text-gray-400">Size</label>
-                  <span className="text-xs text-gray-600 dark:text-gray-300">{textOverlay.fontSize.toFixed(1)}x</span>
-                </div>
-                <input
-                  type="range"
-                  value={textOverlay.fontSize}
-                  onChange={(e) => onChange({ ...textOverlay, fontSize: parseFloat(e.target.value) })}
-                  className="slider w-full"
-                  min={0.5}
-                  max={2.0}
-                  step={0.1}
-                />
-              </div>
-
-              {/* F) Color section */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs text-gray-500 dark:text-gray-400">Auto Contrast Color</label>
-                  <button
-                    onClick={() => onChange({ ...textOverlay, useAutoColor: !textOverlay.useAutoColor })}
-                    className={`relative w-9 h-5 rounded-full transition-colors ${textOverlay.useAutoColor ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'}`}
-                  >
-                    <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${textOverlay.useAutoColor ? 'translate-x-4' : ''}`} />
-                  </button>
-                </div>
-
-                {!textOverlay.useAutoColor && (
-                  <div className="space-y-2">
-                    {/* Color presets */}
-                    <div className="flex flex-wrap gap-1.5">
-                      {TEXT_COLOR_PRESETS.map((preset) => (
-                        <button
-                          key={preset.value}
-                          onClick={() => {
-                            setOverlayColorInput(preset.value);
-                            onChange({ ...textOverlay, color: preset.value });
-                          }}
-                          className={`w-6 h-6 rounded-full border-2 transition-all ${
-                            textOverlay.color === preset.value
-                              ? 'ring-2 ring-blue-500 ring-offset-1 dark:ring-offset-gray-900'
-                              : 'hover:scale-110'
-                          } ${preset.value === '#FFFFFF' ? 'border-gray-300' : 'border-transparent'}`}
-                          style={{ backgroundColor: preset.value }}
-                          title={preset.name}
-                          aria-label={preset.name}
-                        />
-                      ))}
-                    </div>
-
-                    {/* Color picker + hex input */}
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={textOverlay.color}
-                        onChange={(e) => {
-                          setOverlayColorInput(e.target.value);
-                          onChange({ ...textOverlay, color: e.target.value });
-                        }}
-                        className="w-10 h-10 rounded border cursor-pointer"
-                      />
-                      <input
-                        type="text"
-                        value={overlayColorInput}
-                        onChange={(e) => {
-                          setOverlayColorInput(e.target.value);
-                          if (isValidHex(e.target.value)) {
-                            onChange({ ...textOverlay, color: normalizeHex(e.target.value) });
-                          }
-                        }}
-                        onBlur={() => {
-                          if (isValidHex(overlayColorInput)) {
-                            const n = normalizeHex(overlayColorInput);
-                            setOverlayColorInput(n);
-                            onChange({ ...textOverlay, color: n });
-                          } else {
-                            setOverlayColorInput(textOverlay.color);
-                          }
-                        }}
-                        className="flex-1 px-3 py-2 text-sm rounded border bg-white dark:bg-gray-800 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="#000000"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* G) Text Shadow */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs text-gray-500 dark:text-gray-400">Text Shadow</label>
-                  <button
-                    onClick={() => onChange({
-                      ...textOverlay,
-                      textShadow: { ...textOverlay.textShadow, enabled: !textOverlay.textShadow.enabled },
-                    })}
-                    className={`relative w-9 h-5 rounded-full transition-colors ${textOverlay.textShadow.enabled ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'}`}
-                  >
-                    <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${textOverlay.textShadow.enabled ? 'translate-x-4' : ''}`} />
-                  </button>
-                </div>
-
-                {textOverlay.textShadow.enabled && (
-                  <div className="space-y-2 pl-2 border-l-2 border-blue-200 dark:border-blue-800">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs text-gray-500 dark:text-gray-400">Auto Color</label>
-                      <button
-                        onClick={() => onChange({
-                          ...textOverlay,
-                          textShadow: { ...textOverlay.textShadow, useAutoColor: !textOverlay.textShadow.useAutoColor },
-                        })}
-                        className={`relative w-9 h-5 rounded-full transition-colors ${textOverlay.textShadow.useAutoColor ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'}`}
-                      >
-                        <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${textOverlay.textShadow.useAutoColor ? 'translate-x-4' : ''}`} />
-                      </button>
-                    </div>
-
-                    {!textOverlay.textShadow.useAutoColor && (
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="color"
-                          value={textOverlay.textShadow.color}
-                          onChange={(e) => {
-                            setShadowColorInput(e.target.value);
-                            onChange({
-                              ...textOverlay,
-                              textShadow: { ...textOverlay.textShadow, color: e.target.value },
-                            });
-                          }}
-                          className="w-8 h-8 rounded border cursor-pointer"
-                        />
-                        <input
-                          type="text"
-                          value={shadowColorInput}
-                          onChange={(e) => {
-                            setShadowColorInput(e.target.value);
-                            if (isValidHex(e.target.value)) {
-                              onChange({
-                                ...textOverlay,
-                                textShadow: { ...textOverlay.textShadow, color: normalizeHex(e.target.value) },
-                              });
-                            }
-                          }}
-                          onBlur={() => {
-                            if (isValidHex(shadowColorInput)) {
-                              const n = normalizeHex(shadowColorInput);
-                              setShadowColorInput(n);
-                              onChange({
-                                ...textOverlay,
-                                textShadow: { ...textOverlay.textShadow, color: n },
-                              });
-                            } else {
-                              setShadowColorInput(textOverlay.textShadow.color);
-                            }
-                          }}
-                          className="flex-1 px-2 py-1.5 text-sm rounded border bg-white dark:bg-gray-800 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="#000000"
-                        />
-                      </div>
-                    )}
-
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs text-gray-500 dark:text-gray-400">Blur</label>
-                        <span className="text-xs text-gray-600 dark:text-gray-300">{textOverlay.textShadow.blur}px</span>
-                      </div>
-                      <input
-                        type="range"
-                        value={textOverlay.textShadow.blur}
-                        onChange={(e) => onChange({
-                          ...textOverlay,
-                          textShadow: { ...textOverlay.textShadow, blur: parseInt(e.target.value) },
-                        })}
-                        className="slider w-full"
-                        min={0}
-                        max={10}
-                        step={1}
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs text-gray-500 dark:text-gray-400">Offset X</label>
-                        <span className="text-xs text-gray-600 dark:text-gray-300">{textOverlay.textShadow.offsetX}px</span>
-                      </div>
-                      <input
-                        type="range"
-                        value={textOverlay.textShadow.offsetX}
-                        onChange={(e) => onChange({
-                          ...textOverlay,
-                          textShadow: { ...textOverlay.textShadow, offsetX: parseInt(e.target.value) },
-                        })}
-                        className="slider w-full"
-                        min={-5}
-                        max={5}
-                        step={1}
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs text-gray-500 dark:text-gray-400">Offset Y</label>
-                        <span className="text-xs text-gray-600 dark:text-gray-300">{textOverlay.textShadow.offsetY}px</span>
-                      </div>
-                      <input
-                        type="range"
-                        value={textOverlay.textShadow.offsetY}
-                        onChange={(e) => onChange({
-                          ...textOverlay,
-                          textShadow: { ...textOverlay.textShadow, offsetY: parseInt(e.target.value) },
-                        })}
-                        className="slider w-full"
-                        min={-5}
-                        max={5}
-                        step={1}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* H) Text Effect */}
-              <div className="space-y-2">
-                <label className="text-xs text-gray-500 dark:text-gray-400">Text Effect</label>
-                <div className="flex rounded-lg overflow-hidden border">
-                  {([
-                    { value: 'none' as TextEffect, label: 'None' },
-                    { value: 'glow' as TextEffect, label: 'Glow' },
-                    { value: 'film-burn' as TextEffect, label: 'Film Burn' },
-                  ]).map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => onChange({ ...textOverlay, textEffect: opt.value })}
-                      className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
-                        textOverlay.textEffect === opt.value
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-
-                {textOverlay.textEffect !== 'none' && (
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs text-gray-500 dark:text-gray-400">Intensity</label>
-                      <span className="text-xs text-gray-600 dark:text-gray-300">{Math.round(textOverlay.effectIntensity * 100)}%</span>
-                    </div>
+                    <label htmlFor={id.text} className="block text-sm text-ink">Text</label>
                     <input
-                      type="range"
-                      value={textOverlay.effectIntensity}
-                      onChange={(e) => onChange({ ...textOverlay, effectIntensity: parseFloat(e.target.value) })}
-                      className="slider w-full"
-                      min={0.1}
-                      max={1.0}
-                      step={0.05}
+                      id={id.text}
+                      type="text"
+                      value={textOverlay.text}
+                      onChange={(e) => onChange({ ...textOverlay, text: e.target.value })}
+                      className="input"
+                      placeholder="Your text here..."
                     />
                   </div>
-                )}
-              </div>
 
-              {/* I) Opacity slider */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs text-gray-500 dark:text-gray-400">Opacity</label>
-                  <span className="text-xs text-gray-600 dark:text-gray-300">{Math.round(textOverlay.opacity * 100)}%</span>
-                </div>
-                <input
-                  type="range"
-                  value={textOverlay.opacity}
-                  onChange={(e) => onChange({ ...textOverlay, opacity: parseFloat(e.target.value) })}
-                  className="slider w-full"
-                  min={0.1}
-                  max={1.0}
-                  step={0.05}
-                />
-              </div>
-            </>
-          )}
+                  {/* Quick Fill — actions, not selections: they write into the text
+                      field and leave nothing selected, so these are action chips. */}
+                  <div className="space-y-2">
+                    <span id={id.quickFill} className="block text-sm text-ink">Quick Fill</span>
+                    <ChipGroup label="Quick fill" labelledBy={id.quickFill}>
+                      <Chip
+                        onClick={handleFilmCameraDate}
+                        fill
+                        title={exifDate ? `EXIF date: ${exifDate.toLocaleDateString()}` : 'No EXIF date — will use today'}
+                        leading={
+                          <svg className="size-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                        }
+                      >
+                        Film Camera Date
+                      </Chip>
+                      <Chip
+                        onClick={handleTodayDate}
+                        fill
+                        leading={
+                          <svg className="size-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        }
+                      >
+                        Today&rsquo;s Date
+                      </Chip>
+                    </ChipGroup>
+                    {showDateFormat && (
+                      <div className="space-y-1">
+                        <label htmlFor={id.dateFormat} className="block text-sm text-ink">Date Format</label>
+                        <select
+                          id={id.dateFormat}
+                          value={textOverlay.dateStampFormat}
+                          onChange={(e) => handleDateFormatChange(e.target.value as DateStampFormat)}
+                          className="input"
+                        >
+                          {DATE_STAMP_FORMATS.map((f) => (
+                            <option key={f.value} value={f.value}>
+                              {f.label} ({f.example})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* C) Font Picker */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span id={id.fontFamily} className="text-sm text-ink">Font Family</span>
+                      <button
+                        type="button"
+                        onClick={handleRandomFont}
+                        title="Random font"
+                        aria-label="Random font"
+                        className={cx(
+                          'cursor-pointer rounded-md p-1 text-muted',
+                          'transition-[background-color,color] duration-fast ease-out',
+                          'focus-visible:outline-2 focus-visible:outline-offset-2',
+                          '[@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-hover',
+                          '[@media(hover:hover)_and_(pointer:fine)]:hover:text-ink',
+                        )}
+                      >
+                        <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                      </button>
+                    </div>
+
+                    {/* Category filter */}
+                    <Segment
+                      value={fontCategory}
+                      options={FONT_CATEGORY_OPTIONS}
+                      onChange={setFontCategory}
+                      label="Font category"
+                    />
+
+                    {/* Font list */}
+                    <div
+                      ref={fontListRef}
+                      role="group"
+                      aria-labelledby={id.fontFamily}
+                      className="max-h-44 overflow-y-auto rounded-md border border-border bg-surface scrollbar-thin"
+                    >
+                      {/* Recent fonts */}
+                      {recentFontMetas.length > 0 && fontCategory === 'all' && (
+                        <div>
+                          <FontListHeading>Recent</FontListHeading>
+                          {recentFontMetas.map((font) => (
+                            <FontOption
+                              key={`recent-${font.name}`}
+                              font={font}
+                              isSelected={textOverlay.fontFamily === font.name}
+                              onSelect={handleFontSelect}
+                            />
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Featured fonts */}
+                      {featuredFonts.length > 0 && fontCategory === 'all' && (
+                        <div>
+                          <FontListHeading>Featured</FontListHeading>
+                          {featuredFonts.map((font) => (
+                            <FontOption
+                              key={`featured-${font.name}`}
+                              font={font}
+                              isSelected={textOverlay.fontFamily === font.name}
+                              onSelect={handleFontSelect}
+                            />
+                          ))}
+                        </div>
+                      )}
+
+                      {/* All / filtered */}
+                      <div>
+                        {fontCategory === 'all' && <FontListHeading>All Fonts</FontListHeading>}
+                        {filteredFonts.map((font) => (
+                          <FontOption
+                            key={font.name}
+                            font={font}
+                            isSelected={textOverlay.fontFamily === font.name}
+                            onSelect={handleFontSelect}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Weight — always rendered to prevent layout shift */}
+                    <div className="space-y-1">
+                      <span id={id.weight} className="block text-sm text-ink">Weight</span>
+                      <Segment
+                        value={textOverlay.fontWeight}
+                        options={weightOptions}
+                        onChange={handleWeightSelect}
+                        label="Font weight"
+                        labelledBy={id.weight}
+                        disabled={availableWeights.length === 1}
+                      />
+                    </div>
+                  </div>
+
+                  {/* D) Position */}
+                  <div className="space-y-2">
+                    <span id={id.position} className="block text-sm text-ink">Position</span>
+                    <PositionGrid
+                      value={textOverlay.position}
+                      onChange={(position) => onChange({ ...textOverlay, position })}
+                      label="Position"
+                      labelledBy={id.position}
+                    />
+                  </div>
+
+                  {/* E) Font Size — direct manipulation, no transition anywhere */}
+                  <SliderField
+                    id={id.size}
+                    label="Size"
+                    readout={`${textOverlay.fontSize.toFixed(1)}x`}
+                    value={textOverlay.fontSize}
+                    min={0.5}
+                    max={2.0}
+                    step={0.1}
+                    onValueChange={(fontSize) => onChange({ ...textOverlay, fontSize })}
+                  />
+
+                  {/* F) Color section */}
+                  <div className="space-y-2">
+                    <ToggleRow
+                      labelId={id.autoColor}
+                      label="Auto Contrast Color"
+                      checked={textOverlay.useAutoColor}
+                      onChange={(useAutoColor) => onChange({ ...textOverlay, useAutoColor })}
+                      size="sm"
+                    />
+
+                    {!textOverlay.useAutoColor && (
+                      <div className="space-y-2">
+                        {/* Color presets */}
+                        <div role="group" aria-label="Text color presets" className="flex flex-wrap gap-2">
+                          {TEXT_COLOR_PRESETS.map((preset) => (
+                            <ColorSwatch
+                              key={preset.value}
+                              color={preset.value}
+                              name={preset.name}
+                              selected={textOverlay.color === preset.value}
+                              onSelect={() => {
+                                setOverlayColorInput(preset.value);
+                                onChange({ ...textOverlay, color: preset.value });
+                              }}
+                            />
+                          ))}
+                        </div>
+
+                        {/* Color picker + hex input */}
+                        <div className="flex items-center gap-2">
+                          <input
+                            id={id.colorPicker}
+                            type="color"
+                            aria-label="Text color"
+                            value={textOverlay.color}
+                            onChange={(e) => {
+                              setOverlayColorInput(e.target.value);
+                              onChange({ ...textOverlay, color: e.target.value });
+                            }}
+                            className="size-10 flex-none cursor-pointer rounded-md border border-border bg-surface focus-visible:outline-2 focus-visible:outline-offset-2"
+                          />
+                          <input
+                            id={id.colorHex}
+                            type="text"
+                            aria-label="Text color hex value"
+                            value={overlayColorInput}
+                            onChange={(e) => {
+                              setOverlayColorInput(e.target.value);
+                              // Live, so six digits only - see `isCompleteHex`.
+                              // Shorthand commits on the blur below.
+                              if (isCompleteHex(e.target.value)) {
+                                onChange({ ...textOverlay, color: normalizeHex(e.target.value) });
+                              }
+                            }}
+                            onBlur={() => {
+                              if (isValidHex(overlayColorInput)) {
+                                const n = normalizeHex(overlayColorInput);
+                                setOverlayColorInput(n);
+                                onChange({ ...textOverlay, color: n });
+                              } else {
+                                setOverlayColorInput(textOverlay.color);
+                              }
+                            }}
+                            className="input data-voice flex-1"
+                            placeholder="#000000"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* G) Text Shadow */}
+                  <div className="space-y-2">
+                    <ToggleRow
+                      labelId={id.shadow}
+                      label="Text Shadow"
+                      checked={textOverlay.textShadow.enabled}
+                      onChange={(enabled) => onChange({
+                        ...textOverlay,
+                        textShadow: { ...textOverlay.textShadow, enabled },
+                      })}
+                      size="sm"
+                    />
+
+                    {textOverlay.textShadow.enabled && (
+                      <div className="space-y-2 border-l border-border pl-3">
+                        <ToggleRow
+                          labelId={id.shadowAuto}
+                          label="Auto Color"
+                          checked={textOverlay.textShadow.useAutoColor}
+                          onChange={(useAutoColor) => onChange({
+                            ...textOverlay,
+                            textShadow: { ...textOverlay.textShadow, useAutoColor },
+                          })}
+                          size="sm"
+                        />
+
+                        {!textOverlay.textShadow.useAutoColor && (
+                          <div className="flex items-center gap-2">
+                            <input
+                              id={id.shadowPicker}
+                              type="color"
+                              aria-label="Shadow color"
+                              value={textOverlay.textShadow.color}
+                              onChange={(e) => {
+                                setShadowColorInput(e.target.value);
+                                onChange({
+                                  ...textOverlay,
+                                  textShadow: { ...textOverlay.textShadow, color: e.target.value },
+                                });
+                              }}
+                              className="size-8 flex-none cursor-pointer rounded-md border border-border bg-surface focus-visible:outline-2 focus-visible:outline-offset-2"
+                            />
+                            <input
+                              id={id.shadowHex}
+                              type="text"
+                              aria-label="Shadow color hex value"
+                              value={shadowColorInput}
+                              onChange={(e) => {
+                                setShadowColorInput(e.target.value);
+                                if (isCompleteHex(e.target.value)) {
+                                  onChange({
+                                    ...textOverlay,
+                                    textShadow: { ...textOverlay.textShadow, color: normalizeHex(e.target.value) },
+                                  });
+                                }
+                              }}
+                              onBlur={() => {
+                                if (isValidHex(shadowColorInput)) {
+                                  const n = normalizeHex(shadowColorInput);
+                                  setShadowColorInput(n);
+                                  onChange({
+                                    ...textOverlay,
+                                    textShadow: { ...textOverlay.textShadow, color: n },
+                                  });
+                                } else {
+                                  setShadowColorInput(textOverlay.textShadow.color);
+                                }
+                              }}
+                              className="input data-voice flex-1"
+                              placeholder="#000000"
+                            />
+                          </div>
+                        )}
+
+                        <SliderField
+                          id={id.blur}
+                          label="Blur"
+                          readout={`${textOverlay.textShadow.blur}px`}
+                          value={textOverlay.textShadow.blur}
+                          min={0}
+                          max={10}
+                          step={1}
+                          onValueChange={(blur) => onChange({
+                            ...textOverlay,
+                            textShadow: { ...textOverlay.textShadow, blur },
+                          })}
+                        />
+
+                        <SliderField
+                          id={id.offsetX}
+                          label="Offset X"
+                          readout={`${textOverlay.textShadow.offsetX}px`}
+                          value={textOverlay.textShadow.offsetX}
+                          min={-5}
+                          max={5}
+                          step={1}
+                          onValueChange={(offsetX) => onChange({
+                            ...textOverlay,
+                            textShadow: { ...textOverlay.textShadow, offsetX },
+                          })}
+                        />
+
+                        <SliderField
+                          id={id.offsetY}
+                          label="Offset Y"
+                          readout={`${textOverlay.textShadow.offsetY}px`}
+                          value={textOverlay.textShadow.offsetY}
+                          min={-5}
+                          max={5}
+                          step={1}
+                          onValueChange={(offsetY) => onChange({
+                            ...textOverlay,
+                            textShadow: { ...textOverlay.textShadow, offsetY },
+                          })}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* H) Text Effect */}
+                  <div className="space-y-2">
+                    <span id={id.effect} className="block text-sm text-ink">Text Effect</span>
+                    <Segment
+                      value={textOverlay.textEffect}
+                      options={TEXT_EFFECT_OPTIONS}
+                      onChange={(textEffect) => onChange({ ...textOverlay, textEffect })}
+                      label="Text effect"
+                      labelledBy={id.effect}
+                    />
+
+                    {textOverlay.textEffect !== 'none' && (
+                      <SliderField
+                        id={id.intensity}
+                        label="Intensity"
+                        readout={`${Math.round(textOverlay.effectIntensity * 100)}%`}
+                        value={textOverlay.effectIntensity}
+                        min={0.1}
+                        max={1.0}
+                        step={0.05}
+                        onValueChange={(effectIntensity) => onChange({ ...textOverlay, effectIntensity })}
+                      />
+                    )}
+                  </div>
+
+                  {/* I) Opacity */}
+                  <SliderField
+                    id={id.opacity}
+                    label="Opacity"
+                    readout={`${Math.round(textOverlay.opacity * 100)}%`}
+                    value={textOverlay.opacity}
+                    min={0.1}
+                    max={1.0}
+                    step={0.05}
+                    onValueChange={(opacity) => onChange({ ...textOverlay, opacity })}
+                  />
+                </>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
   );
 }
 
+/**
+ * Label on the left, control on the right. The visible text is a <span>, not a
+ * <label>: Switch renders a button, which a <label> cannot name, so the span
+ * carries an id and the switch points at it with `labelledBy`.
+ */
+function ToggleRow({ labelId, label, checked, onChange, size = 'md' }: {
+  labelId: string;
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  size?: 'sm' | 'md';
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <span id={labelId} className="text-sm text-ink">{label}</span>
+      <Switch checked={checked} onChange={onChange} label={label} labelledBy={labelId} size={size} />
+    </div>
+  );
+}
+
+/**
+ * A labelled range input. Direct manipulation: the `.slider` class in
+ * globals.css carries no transition, so the thumb tracks the pointer one to one
+ * and the debounced canvas re-render is the feedback. The readout is a value the
+ * user compares, so it takes the data voice.
+ */
+function SliderField({ id, label, readout, value, min, max, step, onValueChange }: {
+  id: string;
+  label: string;
+  readout: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  onValueChange: (value: number) => void;
+}) {
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between gap-2">
+        <label htmlFor={id} className="text-sm text-ink">{label}</label>
+        <span className="data-voice text-xs text-muted">{readout}</span>
+      </div>
+      <input
+        id={id}
+        type="range"
+        className="slider w-full"
+        value={value}
+        min={min}
+        max={max}
+        step={step}
+        onChange={(e) => onValueChange(parseFloat(e.target.value))}
+      />
+    </div>
+  );
+}
+
+/** Sticky group divider inside the font list. Not a section heading - it labels a
+ *  run of rows within one widget - so it takes MICRO_LABEL rather than the
+ *  heading voice. See src/components/typography.ts for the split. */
+function FontListHeading({ children }: { children: ReactNode }) {
+  return (
+    <div className={cx('sticky top-0 bg-surface px-2 py-1', MICRO_LABEL)}>
+      {children}
+    </div>
+  );
+}
+
+/**
+ * One text-overlay colour. The payload is the colour itself, so none of the four
+ * ui primitives fits: a Chip would tint its own surface. The frame carries the
+ * selection language instead - surface elevation plus an accent hairline - and
+ * the inner square keeps a frame of its own so a white swatch still has an edge
+ * against the panel.
+ */
+function ColorSwatch({ color, name, selected, onSelect }: {
+  color: string;
+  name: string;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={selected}
+      aria-label={name}
+      title={name}
+      className={cx(
+        'flex size-7 cursor-pointer items-center justify-center rounded-sm border p-0.5',
+        'transition-[background-color,border-color] duration-fast ease-out',
+        'focus-visible:outline-2 focus-visible:outline-offset-2',
+        selected
+          ? 'border-accent-hairline bg-surface-selected'
+          : cx(
+              'border-transparent bg-transparent',
+              '[@media(hover:hover)_and_(pointer:fine)]:hover:border-border',
+              '[@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-hover',
+            ),
+      )}
+    >
+      {/* `border-sample-frame`: this square is image-palette pigment, and the two
+          colours it has to survive are #FFFFFF on light chrome and #000000 on
+          dark. `border-border` is a control outline and disappears against both. */}
+      <span
+        aria-hidden="true"
+        className="size-full rounded-sm border border-sample-frame"
+        style={{ backgroundColor: color }}
+      />
+    </button>
+  );
+}
+
+/**
+ * One row of the font list, previewed in its own face once the observer has
+ * loaded it.
+ *
+ * Deliberate deviation from the selection language: the third signal is a check
+ * glyph, not a heavier font weight. Only the 400 weight of a preview face is
+ * loaded, so `font-semibold` here would make the browser synthesise a fake bold
+ * and misrepresent the very face the row exists to show. Surface elevation and
+ * the accent hairline (on the left edge, where a list reads it) are unchanged.
+ *
+ * State is `aria-current`, not `aria-pressed`. The list runs to 35 rows, and
+ * `aria-pressed` would make 34 of them announce "not pressed" on every pass -
+ * noise that buries the one row that matters. Radio semantics would be the
+ * textbook fit, but the sticky Recent/Featured/All headings sit between the rows
+ * and break the containment a radiogroup needs.
+ */
 function FontOption({ font, isSelected, onSelect }: {
   font: FontMeta;
   isSelected: boolean;
@@ -676,20 +801,47 @@ function FontOption({ font, isSelected, onSelect }: {
 
   return (
     <button
+      type="button"
       data-font-name={font.name}
+      aria-current={isSelected ? true : undefined}
       onClick={() => onSelect(font)}
-      className={`w-full text-left px-2 py-1.5 text-sm transition-colors ${
+      className={cx(
+        'flex w-full cursor-pointer items-center gap-2 border-l-2 px-2 py-1.5 text-left text-sm text-ink',
+        'transition-[background-color,border-color] duration-fast ease-out',
+        // Pulled inside: the list scrolls, so an outset ring would be clipped.
+        'focus-visible:outline-2 focus-visible:-outline-offset-2',
         isSelected
-          ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-      }`}
+          ? 'border-accent-hairline bg-surface-selected'
+          : cx(
+              'border-transparent',
+              '[@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-hover',
+            ),
+      )}
       style={fontStyle}
     >
-      {font.name}
+      <span className="min-w-0 flex-1 truncate">{font.name}</span>
       {font.tags && font.tags.length > 0 && (
-        <span className="ml-1.5 text-[10px] text-gray-400 dark:text-gray-500" style={{ fontFamily: 'sans-serif' }}>
+        <span
+          className="flex-none text-micro text-muted"
+          style={{ fontFamily: 'var(--font-sans)' }}
+        >
           {font.tags[0]}
         </span>
+      )}
+      {isSelected && (
+        // `text-ink`, not `text-accent-hairline`: the hairline token is a border
+        // colour, and an icon fill is not a border. This glyph is standing in for
+        // the font weight the selection language would otherwise use, so it takes
+        // the colour that weight would have carried.
+        <svg
+          className="size-3.5 flex-none text-ink"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+        </svg>
       )}
     </button>
   );
