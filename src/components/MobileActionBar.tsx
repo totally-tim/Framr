@@ -90,11 +90,18 @@ export function MobileActionBar({
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
           </svg>
-          <span>Settings</span>
+          {/* Dropped below 360px, where the three controls and their labels no
+              longer fit the row. The icon and `aria-label` carry the button on
+              their own, which is how the Images button beside it already
+              reads. */}
+          <span className="max-[359px]:hidden">Settings</span>
         </button>
 
-        {/* Process/Cancel button - takes remaining space */}
-        <div className="flex-1">
+        {/* Process/Cancel button - takes remaining space. `min-w-0` because a
+            flex item will not shrink past its content by default, and the
+            shared button chassis sets `white-space: nowrap`, so the label had
+            no break opportunity and held the row open past the viewport. */}
+        <div className="flex-1 min-w-0">
           {isProcessing ? (
             // Stopping work is destructive, so it reads through the danger rule
             // and danger text on a neutral surface, never a saturated fill -
@@ -118,11 +125,13 @@ export function MobileActionBar({
               disabled={!hasImages || pendingCount === 0}
               className="btn-primary w-full gap-2 px-4 py-2.5"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span>
+              {/* Truncates rather than pushing the row open, so a four-digit
+                  count on a narrow phone still cannot clip the bar. */}
+              <span className="truncate">
                 {doneCount > 0 && pendingCount === 0
                   ? 'All processed'
                   : `Process ${pendingCount > 0 ? `(${pendingCount})` : ''}`}

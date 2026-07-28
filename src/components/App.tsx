@@ -217,7 +217,7 @@ export default function App() {
     // live region rather than the identical string it already holds.
     setProcessAnnouncement('');
 
-    await processImages(
+    const completed = await processImages(
       pendingImages,
       config,
       (imageId, result) => {
@@ -254,11 +254,17 @@ export default function App() {
        at all - and SPEC 7 asks for screen reader support. The count goes to the
        sr-only region below instead of back into the toast stack, which keeps
        the interface visually quiet and still says the thing that matters. */
-    const processedCount = pendingImages.length - errorCount;
+    /* Counted from what came back, not from the batch minus its failures: a
+       cancel breaks the loop after at most the image in flight and raises no
+       errors, so subtracting would have claimed the whole batch was done and
+       its downloads ready while most rows sat back at `pending`. The returned
+       results are the images that actually finished, whatever stopped the
+       rest, so one phrasing covers failures and cancellation alike. */
+    const processedCount = completed.length;
     if (processedCount > 0) {
       const plural = processedCount !== 1 ? 's' : '';
       setProcessAnnouncement(
-        errorCount > 0
+        processedCount < pendingImages.length
           ? `${processedCount} of ${pendingImages.length} images processed. Downloads ready.`
           : `${processedCount} image${plural} processed. Downloads ready.`
       );

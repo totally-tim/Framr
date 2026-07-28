@@ -155,6 +155,7 @@ export function ImageQueue({
   const dragOverRef = useRef<number | null>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const autoScrollRef = useRef<number | null>(null);
+  const suppressClickRef = useRef(false);
   const [dragFromIndex, setDragFromIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndexState] = useState<number | null>(null);
 
@@ -258,6 +259,9 @@ export function ImageQueue({
       if (dragRef.current) return;
       // The remove button owns its own pointer.
       if ((e.target as HTMLElement).closest('button')) return;
+      // A drag whose click the browser then declined to send would otherwise
+      // leave the flag standing and swallow the next real activation.
+      suppressClickRef.current = false;
       const element = e.currentTarget;
       dragRef.current = {
         pointerId: e.pointerId,
@@ -312,16 +316,39 @@ export function ImageQueue({
     (e: React.PointerEvent<HTMLDivElement>) => {
       const drag = dragRef.current;
       if (!drag || e.pointerId !== drag.pointerId) return;
-      const { moved, fromIndex, imageId } = drag;
+      const { moved, fromIndex } = drag;
       const toIndex = dragOverRef.current;
       endDrag();
-      if (!moved) {
-        onSelect(imageId);
-        return;
-      }
+      // Selecting is left to the click that follows a press, so that assistive
+      // technology reaches it too - see `handleClick`. A drag is not a
+      // selection, and it ends with a click of its own, so that one is marked
+      // to be swallowed.
+      if (!moved) return;
+      suppressClickRef.current = true;
       if (toIndex !== null && toIndex !== fromIndex) onReorderImages(fromIndex, toIndex);
     },
-    [endDrag, onReorderImages, onSelect]
+    [endDrag, onReorderImages]
+  );
+
+  /**
+   * Activation, for everything that is not a hardware key.
+   *
+   * A `role="option"` is worked by synthesizing a click - that is how
+   * VoiceOver and TalkBack activate a custom widget - and neither sends the
+   * pointer sequence the row used to select on, nor does a phone have an Enter
+   * key to fall back to. Selecting on click covers the pointer and assistive
+   * technology from one place, and the row's key handler still covers the
+   * keyboard. The remove button stops its own click, so it never lands here.
+   */
+  const handleClick = useCallback(
+    (id: string) => {
+      if (suppressClickRef.current) {
+        suppressClickRef.current = false;
+        return;
+      }
+      onSelect(id);
+    },
+    [onSelect]
   );
 
   const handlePointerAbort = useCallback(
@@ -567,6 +594,7 @@ export function ImageQueue({
                             setLastFocusedId(image.id);
                           }
                     }
+                    onClick={leaving ? undefined : () => handleClick(image.id)}
                     onPointerDown={
                       leaving ? undefined : (e) => handlePointerDown(e, image, liveIndex)
                     }
