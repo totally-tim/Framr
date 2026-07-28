@@ -16,10 +16,18 @@ export function rgbToHex(r: number, g: number, b: number): string {
   }).join('');
 }
 
+/**
+ * The '#' is optional. Someone typing a hex into the border or text-colour
+ * field types the six digits they read off a palette, and requiring the hash
+ * meant "112233" was rejected on every keystroke and silently reverted on blur.
+ * `hexToRgb` above has always accepted a bare value, and `normalizeHex` puts
+ * the '#' back, so this was the one place that disagreed.
+ */
 export function isValidHex(color: string): boolean {
-  return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(color);
+  return /^#?([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(color);
 }
 
+/** Always returns `#RRGGBB`: shorthand expanded, '#' added, digits upper-cased. */
 export function normalizeHex(color: string): string {
   let hex = color.replace('#', '');
 
@@ -49,17 +57,30 @@ export const PRESET_COLORS = [
   { name: 'White', value: '#FFFFFF' },
 ];
 
+/**
+ * Text-overlay colours, chosen to sit *on a photograph*.
+ *
+ * These were previously Tailwind's stock 500 ramp, which is tuned for legibility
+ * on a flat UI surface: high chroma at mid lightness, evenly spaced around the
+ * wheel. Over a photograph that ramp reads as a sticker, because nothing in a
+ * photograph is that saturated at that lightness.
+ *
+ * The set below spreads lightness instead of hue, since lightness contrast is
+ * what makes a caption legible against an unpredictable image: two near-white
+ * papers, three darks, three mid-chroma inks borrowed from photographic
+ * practice - the darkroom safelight, the cyan process primary, and sepia
+ * toning. Every value is off-neutral on purpose; pure #FFFFFF and #000000 clip
+ * against a photograph's own highlights and shadows and lose their edge.
+ */
 export const TEXT_COLOR_PRESETS = [
-  { name: 'White', value: '#FFFFFF' },
-  { name: 'Black', value: '#000000' },
-  { name: 'Red', value: '#EF4444' },
-  { name: 'Orange', value: '#F97316' },
-  { name: 'Yellow', value: '#EAB308' },
-  { name: 'Green', value: '#22C55E' },
-  { name: 'Blue', value: '#3B82F6' },
-  { name: 'Purple', value: '#A855F7' },
-  { name: 'Pink', value: '#EC4899' },
-  { name: 'Gray', value: '#6B7280' },
+  { name: 'Paper White', value: '#F7F4EE' },
+  { name: 'Rich Black', value: '#0C0C0E' },
+  { name: 'Bone', value: '#E2D9C8' },
+  { name: 'Signal Red', value: '#C8102E' },
+  { name: 'Safelight Amber', value: '#E0912F' },
+  { name: 'Cyan', value: '#0F9BB8' },
+  { name: 'Deep Indigo', value: '#2B2D63' },
+  { name: 'Sepia', value: '#6B4A2C' },
 ];
 
 export const CANVAS_BACKGROUND_COLORS = [

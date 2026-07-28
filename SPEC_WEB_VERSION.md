@@ -160,19 +160,144 @@ After images loaded:
 
 ### 4.3 Theme System
 
+Framr's chrome surrounds a photograph the user is colour-judging. The chrome is therefore
+a neutral instrument: it stays cool-tinted and low-chroma so it does not shift the perceived
+white balance of the image inside it. Blue remains the anchor hue for that reason, not as a
+default.
+
+**Anchor hue:** 250 (cool blue). Neutrals carry a trace of it (chroma 0.008-0.015) so no
+surface is flat grey. Colours are expressed in OKLCH for perceptually even lightness steps.
+
 **Light Mode:**
-- Background: #FAFAFA
-- Surface: #FFFFFF
-- Text: #1A1A1A
-- Accent: #2563EB (blue)
-- Border: #E5E7EB
+- Background: oklch(97% 0.006 250)
+- Surface: oklch(99% 0.004 250)
+- Text: oklch(20% 0.012 250)
+- Accent: oklch(52% 0.19 250) (blue)
+- Border: oklch(90% 0.008 250)
 
 **Dark Mode:**
-- Background: #0F0F0F
-- Surface: #1A1A1A
-- Text: #F5F5F5
-- Accent: #3B82F6 (blue)
-- Border: #2D2D2D
+- Background: oklch(14.5% 0.010 250)
+- Surface: oklch(21% 0.013 250)
+- Text: oklch(94% 0.006 250)
+- Accent: oklch(62% 0.16 250) (blue)
+- Border: oklch(34% 0.014 250)
+
+**Accent budget:** the accent occupies 3% or less of any viewport. It has exactly two jobs -
+the focus ring, and the single primary action (Process). It is never used to mean "selected".
+
+**Selection language:** an active preset, segment, swatch, or queue row reads through
+surface *contrast*, an accent hairline, and font weight - never through an accent fill.
+This keeps selection legible when several controls are active at once.
+
+"Contrast" rather than "elevation" is deliberate. In dark mode the selected surface is
+lighter than the surface beneath it; in light mode it is darker. Light mode has almost no
+headroom above `--color-surface` (Y 0.971), so a genuinely lighter selected state would be
+invisible. What has to hold in both themes is that the selected surface *separates* from its
+neighbour, not that it separates in the same direction.
+
+**Elevation:** dark mode raises surfaces by lightness, not by shadow. Shadows are invisible
+against a dark background and read as glow when forced.
+
+The steps are uneven on purpose, and sized by what each boundary has to do rather than by a
+fixed increment. The containment pairs a user actually reads as separate regions - preview
+stage against sidebar, page against header, panel against popover - carry roughly 6% L. The
+steps near the top of the ladder are smaller (2% between hover, raised, and selected) because
+they are bounded from above: muted metadata on a selected row must hold 4.5:1, and the accent
+hairline on a selected surface must hold 3:1. `--color-surface-selected` sits at 29% rather
+than 30% for that second reason - at 30% the hairline falls to 2.93:1 and stops clearing AA.
+
+An earlier revision of this section specified "approximately +4% L per level". That produced
+adjacent surfaces at 1.06:1, which is imperceptible, so the numbers were widened.
+
+**On measuring dark elevation:** WCAG contrast ratios understate every dark pair, because the
++0.05 flare term in the formula saturates near black. A 3:1 ratio over a 14.5% L page needs
+Y=0.109, i.e. L≈0.478 - a light grey, not a dark theme. Judge adjacent dark surfaces by OKLCH
+ΔL, and reserve contrast ratios for the text and hairline minimums above, which are real
+accessibility floors.
+
+**Scope of the lightness bands:** the 12-18% dark / 96-98% light band describes the *base*
+surface (`--color-background`). Surfaces above the base necessarily sit outside it -
+`--color-surface` ships at 21% - or the ladder would have nowhere to go.
+
+### 4.4 Typography
+
+Framr ships no webfont for its own interface. Every byte on the critical render path competes
+with the image the user came to work on, and the tool's pitch is that it starts instantly.
+Character comes from the scale and from how the two voices are used, not from a licensed face.
+
+**Two voices:**
+- **Chrome** - system UI stack. Labels, headings, buttons, body copy, help text.
+- **Data** - system monospace stack with `font-variant-numeric: tabular-nums`. Every value the
+  user reads or compares: pixel dimensions, hex colours, percentages, file sizes, zoom level,
+  keyboard hints, and the `<Framr />` wordmark.
+
+The data voice is a functional choice before it is a stylistic one. Tabular figures let a column
+of dimensions or a row of hex values align, which is what a photographer actually scans for.
+
+**Font stacks:**
+- Chrome: `system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif`
+- Data: `ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`
+
+The data stack names only faces that ship with an operating system. An earlier stack led with
+`JetBrains Mono`, which the project never loaded, so it silently fell through to Monaco or
+Consolas. Do not name a face the project does not ship. (JetBrains Mono remains available as a
+*text-overlay* font in `src/utils/fonts.ts` - that path loads on demand and is unrelated.)
+
+**Scale** - six steps, replacing the previous two-size system:
+
+| Token | Size | Use |
+|-------|------|-----|
+| `--text-micro` | 11px | Section micro-labels, badges |
+| `--text-xs` | 12px | Helper text, secondary metadata |
+| `--text-sm` | 14px | Control labels, body copy |
+| `--text-base` | 16px | Section headings, drawer titles |
+| `--text-lg` | 20px | Panel titles |
+| `--text-xl` | 28px | Wordmark, empty-state headline |
+
+**One heading voice.** Sidebar sections, accordion triggers, and preset group headings all use
+the same treatment. The interface previously carried three competing heading styles on one
+screen.
+
+### 4.5 Motion
+
+Framr has no brand motion personality. The governing profile is **platform-native neutral web
+defaults**, chosen deliberately: the subject is the photograph, and the chrome is an instrument
+that should not draw attention to itself. Motion earns its place by carrying information or it
+is cut.
+
+**Duration bands:**
+
+| Role | Duration | Use |
+|------|----------|-----|
+| Fast feedback | 100-150ms | Button press, toggle, segment/chip/swatch select |
+| Standard entrance | 200-300ms | Accordion, drawer, queue row, toast |
+| Standard exit | 150-220ms | The same surfaces, at ~75% of the entrance |
+| Continuous gesture | untimed | Sliders, compare drag, queue reorder |
+
+Easing is the platform ease-out for entrances and ease-in for exits. `transition: all` is banned
+- always enumerate the properties.
+
+**What does not move:**
+- **The preview canvas.** Settings changes drive a debounced re-render on every slider tick. The
+  canvas container carries no transition; the new pixels are the feedback.
+- **Direct manipulation.** Sliders and the compare handle track the pointer one-to-one with no
+  timed transition.
+- **Focus rings.** A focus ring is never inside a transition. It must be fully visible on the
+  first frame after focus lands, or keyboard users have no indicator.
+
+**Direct manipulation** uses Pointer Events throughout: a single active `pointerId`,
+`setPointerCapture` after any DOM move, every event filtered by pointer identity, and both
+`pointercancel` and `lostpointercapture` treated as cancellation with idempotent cleanup.
+
+**Reduced motion.** Under `prefers-reduced-motion: reduce`, all travel and scale are removed -
+the drawer appears in place, the accordion opens instantly, rows and toasts appear without
+sliding. Colour, opacity, focus indicators, and every selected or disabled state are retained.
+Direct manipulation is *not* reduced: the slider and compare handle stay one-to-one with the
+user's hand, and only autonomous post-release settling is removed. Progress bars keep running -
+they are functional, not decorative.
+
+**Success is silent.** A toast fires for failures and for async results the user cannot see.
+It does not announce something the interface already shows.
 
 ---
 

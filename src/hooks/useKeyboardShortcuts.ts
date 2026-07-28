@@ -29,6 +29,26 @@ export function useKeyboardShortcuts({
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (isInputFocused()) return;
+
+      /* Someone nearer the key already dealt with it.
+       *
+       * These are last-resort shortcuts, bound to `window` so they work with
+       * nothing in particular focused. Every control that owns one of these
+       * keys - the queue rows, Segment, PositionGrid - calls `preventDefault()`
+       * before acting, and React attaches its listener at the root container,
+       * which is below `window`, so that call has already landed by the time
+       * this runs. Without the check both handlers fire: one Delete removed the
+       * focused image AND the selected one, an arrow inside any radiogroup
+       * changed the group's value AND dragged the image selection along with
+       * it, and an Escape cancelling a reorder drag also blanked the preview.
+       *
+       * Deliberately a protocol rather than a list of exempt containers: a
+       * control that marks a key handled is covered on the day it is written,
+       * without this file having to learn about it. Cmd/Ctrl+Enter survives
+       * because no control claims it - the row handler bails out of its
+       * Enter case on a modifier rather than preventing the default. */
+      if (e.defaultPrevented) return;
+
       if (!hasImages) return;
 
       const isModifier = e.metaKey || e.ctrlKey;

@@ -4,15 +4,381 @@
 
 @variant dark (&:where(.dark, .dark *));
 
-@theme {
-  --color-surface-light: #FFFFFF;
-  --color-surface-dark: #1A1A1A;
-  --color-background-light: #FAFAFA;
-  --color-background-dark: #0F0F0F;
-  --color-border-light: #E5E7EB;
-  --color-border-dark: #2D2D2D;
-  --font-mono: 'JetBrains Mono', 'Fira Code', 'Monaco', 'Consolas', monospace;
+/* ============================================================================
+   FRAMR CHROME TOKENS
+
+   This file is the single source of truth for the chrome palette, the type
+   scale, the radius scale, and the motion tokens. Components consume tokens by
+   name only. Nothing below this block may hardcode a colour, a duration, or a
+   font size.
+
+   The image palette (border colours, canvas backgrounds, text-overlay colours)
+   lives in src/utils/colorUtils.ts and is deliberately unrelated. Never import
+   a token from here into that file, and never copy a value the other way.
+
+   Theme switching: useTheme puts `.dark` on <html>, which is :root. The @theme
+   block below declares the light values; the unlayered `.dark` rule that
+   follows overrides the same custom properties on the same element, so every
+   `--color-*` token is theme-aware on its own. There is no `-light` / `-dark`
+   token pair any more and no `dark:` variant is needed for colour.
+   ========================================================================= */
+
+@theme static {
+  /* --- Fonts -------------------------------------------------------------
+     Two voices, both from the operating system. Framr ships no webfont for its
+     own interface. Never name a face the project does not load.
+     Chrome voice = --font-sans. Data voice = --font-mono + tabular-nums
+     (use the `data-voice` utility, defined near the bottom of this file).
+     JetBrains Mono is NOT here: it is a user-facing text-overlay face that
+     src/utils/fonts.ts lazy-loads onto the canvas, which is a separate path. */
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* --- Chrome palette, light ---------------------------------------------
+     Anchor hue 250 (cool blue). Every neutral carries a trace of it
+     (chroma 0.004-0.016) so no surface is flat grey and nothing shifts the
+     perceived white balance of the photograph the chrome surrounds. */
+
+  /* Surfaces, darkest to lightest. In light mode a raised surface reads
+     through a shadow; the lightness ladder does the work in dark mode. */
+  --color-surface-sunken: oklch(93.5% 0.008 250);
+  --color-surface-selected: oklch(95% 0.016 250);
+  --color-surface-hover: oklch(96.5% 0.008 250);
+  --color-background: oklch(97% 0.006 250);
+  --color-surface: oklch(99% 0.004 250);
+  --color-surface-raised: oklch(99.5% 0.003 250);
+
+  /* Text */
+  --color-ink: oklch(20% 0.012 250);
+  --color-muted: oklch(50% 0.014 250);
+
+  /* Rules */
+  --color-border: oklch(90% 0.008 250);
+
+  /* The frame around a sample of the IMAGE palette - the pigment square inside a
+     border swatch, a text-colour swatch, or a preset chip. It is NOT a control
+     outline: those stay on --color-border, which is tuned to disappear because
+     disappearing is a divider's job.
+
+     A sample frame cannot disappear. The sample's fill is whatever the user
+     picked, so the frame is the only thing separating a #FFFFFF sample from
+     light chrome and a #000000 sample from dark chrome - the two cases where the
+     sample and the surface behind it are the same colour. That is why this is a
+     mid neutral that inverts across the themes rather than a rule colour, and
+     why the three sites that frame a sample were previously split between
+     border-border (1.29:1 against a dark chip) and border-muted.
+
+     Measured in the browser against the extremes it has to survive:
+       light (#6c7278): 4.87:1 vs a #FFFFFF sample, 4.03-4.32:1 vs the chip
+       dark  (#9fa5ac): 8.45:1 vs a #000000 sample, 5.69-8.45:1 vs the chip
+     Apply it only to an aria-hidden pigment sample. A control the user operates
+     (an <input type="color">, say) is a control outline and keeps border-border. */
+  --color-sample-frame: oklch(55% 0.012 250);
+
+  /* Accent. Two jobs only: the focus ring and the single primary action
+     (Process). Never an accent fill for "selected". Budget: <=3% of viewport. */
+  --color-accent: oklch(52% 0.19 250);
+  --color-accent-hover: oklch(46% 0.19 250);
+  --color-accent-ink: oklch(99% 0.01 250);
+  --color-accent-hairline: oklch(60% 0.15 250);
+  --color-focus: var(--color-accent);
+
+  /* Status. Failure states only - success is silent and has no token by
+     design, because a success toast announces what the interface already
+     shows. */
+  --color-danger: oklch(55% 0.19 25);
+  --color-warning: oklch(70% 0.15 75);
+
+  /* --- Type scale ---------------------------------------------------------
+     Six steps. See the TYPE SCALE MAPPING RULE below for which role takes
+     which token - that table is binding. */
+  --text-micro: 0.6875rem; /* 11px */
+  --text-micro--line-height: 1rem; /* 16px */
+  --text-micro--letter-spacing: 0.06em; /* micro-labels carry their own
+                                           tracking - never add tracking-wide */
+  --text-xs: 0.75rem; /* 12px */
+  --text-xs--line-height: 1.125rem; /* 18px */
+  --text-sm: 0.875rem; /* 14px */
+  --text-sm--line-height: 1.25rem; /* 20px */
+  --text-base: 1rem; /* 16px */
+  --text-base--line-height: 1.5rem; /* 24px */
+  --text-lg: 1.25rem; /* 20px */
+  --text-lg--line-height: 1.75rem; /* 28px */
+  --text-xl: 1.75rem; /* 28px */
+  --text-xl--line-height: 2.125rem; /* 34px */
+
+  /* --- Radius scale -------------------------------------------------------
+     Three named steps plus the pill. Replaces six ad-hoc radii. */
+  --radius-sm: 0.25rem; /* 4px  - inline chips, kbd hints, tags */
+  --radius-md: 0.5rem; /* 8px  - controls: buttons, inputs, segments, swatches */
+  --radius-lg: 0.75rem; /* 12px - containers: panels, cards, drawer, modal */
+  /* `rounded-full` is a static Tailwind utility - pills and circles only. */
+
+  /* --- Motion -------------------------------------------------------------
+     Platform-native neutral. Framr has no brand motion personality: the
+     subject is the photograph and the chrome is an instrument. */
+  --dur-fast: 120ms; /* press, toggle, chip/segment/swatch select, hover */
+  --dur-enter: 240ms; /* accordion, drawer, queue row, toast - entrance */
+  --dur-exit: 180ms; /* the same surfaces reversed (~75% of entrance) */
+
+  --ease-out: cubic-bezier(0, 0, 0.2, 1); /* entrances */
+  --ease-in: cubic-bezier(0.4, 0, 1, 1); /* exits */
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1); /* reversible state changes */
+
+  /* Tailwind-facing aliases so `duration-fast` / `duration-enter` /
+     `duration-exit` exist as utilities alongside the raw vars. */
+  --transition-duration-fast: var(--dur-fast);
+  --transition-duration-enter: var(--dur-enter);
+  --transition-duration-exit: var(--dur-exit);
+
+  /* A bare `transition-colors` with no duration utility lands on fast
+     feedback + platform ease-out instead of Tailwind's 150ms default. */
+  --default-transition-duration: var(--dur-fast);
+  --default-transition-timing-function: var(--ease-out);
 }
+
+/* Dark mode. Elevation steps by lightness, never by shadow - a shadow is
+   invisible against a dark background and reads as glow when forced. Unlayered
+   on purpose so it beats Tailwind's `@layer theme`.
+
+   THE LADDER IS WIDER THAN IT LOOKS ON PAPER, AND IT HAS TO BE.
+   The ladder used to run 11 / 14 / 18 / 21 / 22 / 25, which is the ~4% L step
+   the spec describes. Measured, that put header, sidebar and preview stage at
+   1.03-1.09:1 against each other, so nothing separated: the only boundary
+   anywhere in dark mode was the border hairline at 1.29:1. The numbers were
+   wrong, not the code.
+
+   WCAG contrast read off getComputedStyle in Chrome, before -> after (ΔL in
+   OKLCH beside it, which is the metric that actually predicts whether a step is
+   visible - WCAG's +0.05 flare term saturates near black and understates every
+   dark pair):
+     preview stage -> sidebar   1.086 -> 1.174:1   ΔL 0.070 -> 0.125
+     page -> header/aside/foot  1.062 -> 1.122:1   ΔL 0.040 -> 0.065
+     panel -> popover/drawer    1.085 -> 1.174:1   ΔL 0.040 -> 0.060
+     panel -> its own rule      1.282 -> 1.514:1   ΔL 0.100 -> 0.130
+     panel -> selected chip     1.171 -> 1.252:1   ΔL 0.070 -> 0.080
+
+   A 3:1 step between two adjacent dark fields is not reachable and was not the
+   target: over a 14.5% L page it would need L≈0.478, a light-grey surface in a
+   dark theme. Roughly doubling every ΔL is what is available, and the border
+   was brightened with the surfaces so the hairline keeps leading the boundary
+   rather than being swallowed by the lighter panels underneath it.
+
+   Steps are deliberately uneven. `background -> surface` and `surface -> raised`
+   carry real containment (page vs panel, panel vs floating surface) and get the
+   room; `hover` and `selected` are states on a control the user is already
+   looking at, and they arrive with a border and a weight change beside them.
+
+   Ceilings that fixed the top of the ladder: `muted` metadata on a selected
+   queue row holds at 4.91:1 (AA needs 4.5), and the accent hairline on a
+   selected surface holds at 3.05:1 (AA non-text needs 3.0). `selected` is 29%
+   rather than 30% for exactly that second reason - at 30% the hairline falls to
+   2.93:1 and stops clearing the threshold. */
+.dark {
+  --color-surface-sunken: oklch(8.5% 0.010 250);
+  --color-background: oklch(14.5% 0.010 250);
+  --color-surface: oklch(21% 0.013 250);
+  --color-surface-hover: oklch(25% 0.014 250);
+  --color-surface-raised: oklch(27% 0.015 250);
+  --color-surface-selected: oklch(29% 0.020 250);
+
+  --color-ink: oklch(94% 0.006 250);
+  --color-muted: oklch(68% 0.012 250);
+
+  --color-border: oklch(34% 0.014 250);
+
+  /* Inverted: on dark chrome the sample that would vanish is #000000, so the
+     frame has to be light. 8.45:1 against a black sample. */
+  --color-sample-frame: oklch(72% 0.012 250);
+
+  --color-accent: oklch(62% 0.16 250);
+  --color-accent-hover: oklch(68% 0.15 250);
+  /* Deliberately dark: the dark-mode accent is bright, so dark text on it
+     clears contrast where white text would not. */
+  --color-accent-ink: oklch(16% 0.02 250);
+  --color-accent-hairline: oklch(56% 0.13 250);
+
+  --color-danger: oklch(68% 0.16 25);
+  --color-warning: oklch(78% 0.13 75);
+}
+
+/* ============================================================================
+   MAPPING RULES - BINDING
+
+   Every agent touching a component reads these tables and applies them
+   literally. They exist because the previous palette and type scale
+   fragmented: each site was decided independently, so nothing lined up.
+   If a role you need is genuinely absent, do not invent a token or fall back
+   to a raw Tailwind colour - flag it.
+   ---------------------------------------------------------------------------
+
+   1. TYPE SCALE MAPPING RULE
+   ---------------------------------------------------------------------------
+   ROLE                                            TOKEN          UTILITY
+   Section micro-label, badge, chip caption,
+     ALL-CAPS eyebrow, keyboard hint               --text-micro   text-micro
+   Helper text, hint, count, metadata, timestamp,
+     file size, footer, "secondary" copy           --text-xs      text-xs
+   Control label, button text, menu item,
+     body copy, input value, tab label             --text-sm      text-sm
+   Section heading, accordion trigger,
+     drawer title, preset-group heading            --text-base    text-base
+   Panel title                                     --text-lg      text-lg
+   Wordmark, empty-state headline                  --text-xl      text-xl
+
+   Decision procedure - walk it in order, take the first match:
+     1. Is it ALL-CAPS?                                  -> text-micro
+     2. Is it the wordmark, or an empty-state headline?  -> text-xl
+     3. Is it the title of a whole panel?                -> text-lg
+     4. Is it the heading of a section, an accordion
+        trigger, or a drawer title?                      -> text-base
+     5. Does it name a control the user acts on, or is
+        it body copy the user reads to decide?           -> text-sm
+     6. Does it explain, qualify, or report *about* a
+        control (helper, hint, count, metadata)?         -> text-xs
+     7. Still torn: text-sm if the user reads it to
+        operate a control, text-xs if they read it after.
+
+   Notes that override instinct:
+     - text-micro carries its own letter-spacing. Never add tracking-wide.
+     - text-[10px] sites become text-micro. This is an intentional increase
+       from 10px to 11px - do not preserve 10px.
+     - text-lg is now 20px (was 18px) and text-xl is now 28px (was 20px).
+       Both changes are intentional.
+     - One heading voice. Sections, accordion triggers, and preset-group
+       headings all get the same treatment - do not reintroduce a third style.
+   ---------------------------------------------------------------------------
+
+   2. COLOUR MAPPING RULE
+   ---------------------------------------------------------------------------
+   No `gray-*`, `blue-*`, `white`, or `black` utility survives in a component.
+   Every one maps to a token below, and no token needs a `dark:` variant.
+
+   ROLE                                            TOKEN / UTILITY
+   Page behind the panels                          bg-background
+   Panel, card, header, footer, toolbar, sidebar   bg-surface
+   Popover, drawer, modal, toast, dropdown         bg-surface-raised
+   Inset well: slider track, progress track,
+     canvas gutter, code/kbd chip                  bg-surface-sunken
+   Hover on any neutral control or row             bg-surface-hover
+   Selected preset, segment, swatch, queue row     bg-surface-selected
+   Primary text, headings, control labels          text-ink
+   Helper text, metadata, placeholder, icons
+     that are not the subject                      text-muted
+   Every 1px rule, divider, control outline        border-border
+   Frame around a sample of the IMAGE palette
+     (the pigment square inside a swatch or a
+     preset chip - never a control the user
+     operates)                                     border-sample-frame
+   Selection hairline (with bg-surface-selected
+     and a heavier font weight)                    border-accent-hairline
+   The single primary action (Process) fill        bg-accent / hover:bg-accent-hover
+   Text and icons on an accent fill                text-accent-ink
+   Focus ring                                      outline-focus (see rule 4)
+   Failure toast, destructive action, error text   text-danger / border-danger
+   Warning toast, non-blocking caution             text-warning
+
+   Selection is NEVER an accent fill. An active preset, segment, swatch, or
+   queue row reads through three things together: bg-surface-selected, a
+   border-accent-hairline, and a heavier font weight. That keeps selection
+   legible when several controls are active at once, and it keeps the accent
+   inside its <=3% budget.
+   ---------------------------------------------------------------------------
+
+   3. RADIUS MAPPING RULE
+   ---------------------------------------------------------------------------
+   rounded-sm    Inline chips, kbd hints, tags, colour swatches in a grid
+   rounded-md    Controls: buttons, inputs, segments, menu items, list rows
+   rounded-lg    Containers: panels, cards, drawer, modal, toast, dropdown
+   rounded-full  Pills and circles only: toggle knob, slider thumb, circular
+                 icon button, avatar, badge dot
+   Nothing else. rounded-xl, rounded-2xl, rounded-md-on-a-panel and friends
+   are off-scale - map them to the four names above.
+
+   Side and corner variants are fine as long as the SIZE name comes from the
+   scale: `rounded-t-lg` on the mobile drawer is correct, `rounded-t-2xl` is
+   not, and a bare `rounded-t` (no size) resolves to a Tailwind default that
+   is outside this scale - always name the size.
+   ---------------------------------------------------------------------------
+
+   4. MOTION MAPPING RULE
+   ---------------------------------------------------------------------------
+   INTERACTION                                     TOKENS
+   Button press, toggle, chip/segment/swatch
+     select, hover feedback                        duration-fast + ease-out
+   Accordion, drawer, queue row, toast - entrance  duration-enter + ease-out
+   The same surfaces - exit                        duration-exit  + ease-in
+   Theme cross-fade: body + every chrome surface   duration-enter + ease-in-out
+     (a whole screen re-colouring at once is not
+      fast feedback - at 120ms it reads as a
+      flash. The three sites that carry it are the
+      body rule below, App's shared surface class,
+      and the mobile action bar.)
+   Slider, compare handle, queue row drag          NO transition at all
+   Preview canvas container                        NO transition at all
+
+   Non-negotiable:
+     - `transition-all` is banned. Always enumerate: transition-colors,
+       transition-opacity, transition-transform, or an explicit
+       transition-property list.
+     - A focus ring is never inside a transition. Use outline + outline-offset
+       (see .btn below), never a ring/box-shadow that a transition can catch.
+       It must be fully visible on the first frame after focus lands.
+     - The preview canvas container carries no transition. A settings change
+       drives a debounced re-render; the new pixels are the feedback.
+     - Wrap hover-only feedback in
+       `@media (hover: hover) and (pointer: fine)`. Hover is never the only
+       path to a control.
+     - Accordions animate `grid-template-rows: 0fr -> 1fr`, never `height`.
+     - Success is silent. A toast fires for failures and for async results the
+       user cannot see - never to announce something already on screen.
+
+   Reduced motion: the block at the bottom of this file strips travel and
+   scale globally. `animate-spin` is exempted there by name, so a spinner keeps
+   running with no extra class. Any OTHER functional motion - a keyframed
+   progress bar, a live status indicator - must carry the `motion-functional`
+   class to opt out of that block. A state-driven progress bar whose width is
+   set inline needs nothing: it still advances, just stepwise. Decorative loops
+   (`animate-pulse` on a selected row) get no exemption. Direct manipulation is
+   never reduced.
+   ---------------------------------------------------------------------------
+
+   5. FLOATING SURFACE RECIPE
+   ---------------------------------------------------------------------------
+   A popover, drawer, modal, toast, or dropdown - anything that leaves the
+   document flow and hangs over the interface - takes all four of these, always
+   together:
+
+     bg-surface-raised   rounded-lg   border border-border   shadow-lg dark:shadow-none
+
+   The shadow and the lightness step are not alternatives, they are the same
+   job done by whichever one the theme can afford. Light mode has almost no
+   headroom left: `surface` is 99% L and `surface-raised` is 99.5%, so the step
+   between a panel and a popover above it measures 1.017:1 and the shadow is the
+   entire separation. Dark mode is the reverse - a shadow against a dark
+   background is invisible and reads as glow when forced, so `dark:shadow-none`
+   drops it and the widened lightness step (1.176:1) plus the border carry the
+   boundary instead. Omitting either half leaves the surface unseparated in one
+   theme, which is exactly what the keyboard-shortcuts popover did in light mode.
+   ---------------------------------------------------------------------------
+
+   6. WHICH VOICE A NUMBER TAKES
+   ---------------------------------------------------------------------------
+   The data voice belongs to a value that stands ALONE in its own element - a
+   thing the user reads off or compares against the value beside it. A numeral
+   that is part of a prose label or a proper name stays in the chrome voice with
+   the words around it.
+
+     data voice   a slider readout (`45%`), a hex field, a percentage counting
+                  up, a bare count next to an icon, a keyboard hint
+     chrome voice `Image 3 of 12`, `4 images ready`, `Process (2)`, and every
+                  preset name - `White 3%` and `1:1` alike
+
+   A single label NEVER mixes both faces. That rule is what settles the preset
+   chips: `White 3%` and `1:1` are both the `name` of a preset and they sit one
+   row apart, so they take the same voice - and it cannot be the mono one,
+   because that would set the word "White" in monospace.
+   ========================================================================= */
 
 @layer base {
   html {
@@ -20,65 +386,190 @@
   }
 
   body {
-    @apply bg-background-light dark:bg-background-dark text-gray-900 dark:text-gray-100;
-    @apply transition-colors duration-200;
+    background-color: var(--color-background);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    /* Theme toggle: one surface changing colour, so it cross-fades. Colour is
+       retained under reduced motion. */
+    transition-property: background-color, color;
+    transition-duration: var(--dur-enter);
+    transition-timing-function: var(--ease-in-out);
   }
 
+  /* Tailwind's preflight resets every border to `0 solid` with no colour, so
+     this gives any border that gets a width the chrome rule colour. */
   * {
-    @apply border-border-light dark:border-border-dark;
+    border-color: var(--color-border);
+  }
+
+  /* Every element's outline is pre-set to the focus colour, so a focus ring
+     only ever switches outline-style/width - both unanimatable. This matters
+     because Tailwind's own `transition-colors` includes `outline-color` in its
+     property list: without this line, any element carrying transition-colors
+     would fade its focus ring in, which is exactly what SPEC 4.5 forbids.
+     Do not remove it, and do not set a different outline-color on focus. */
+  *,
+  ::before,
+  ::after {
+    outline-color: var(--color-focus);
   }
 }
 
 @layer components {
-  .btn {
-    @apply px-4 py-2 rounded-lg font-medium transition-all duration-150;
-    @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
-    @apply disabled:opacity-50 disabled:cursor-not-allowed;
-  }
-
-  .btn-primary {
-    @apply px-4 py-2 rounded-lg font-medium transition-all duration-150;
-    @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
-    @apply disabled:opacity-50 disabled:cursor-not-allowed;
-    @apply bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800;
-  }
-
+  /* Shared button chassis. Declared once for all three variants - the
+     variants add colour only. `.btn-primary` and `.btn-secondary` are used
+     standalone in markup, so they must not depend on `.btn` being present. */
+  .btn,
+  .btn-primary,
   .btn-secondary {
-    @apply px-4 py-2 rounded-lg font-medium transition-all duration-150;
-    @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
-    @apply disabled:opacity-50 disabled:cursor-not-allowed;
-    @apply bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white;
-    @apply hover:bg-gray-300 dark:hover:bg-gray-600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    /* Enumerated on purpose. `outline` is absent, so the focus ring below can
+       never fade in. */
+    transition-property: background-color, border-color, color;
+    transition-duration: var(--dur-fast);
+    transition-timing-function: var(--ease-out);
+  }
+
+  .btn:focus-visible,
+  .btn-primary:focus-visible,
+  .btn-secondary:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .btn:disabled,
+  .btn-primary:disabled,
+  .btn-secondary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Quiet / tertiary */
+  .btn {
+    background-color: transparent;
+    color: var(--color-ink);
+  }
+
+  /* The single primary action */
+  .btn-primary {
+    background-color: var(--color-accent);
+    color: var(--color-accent-ink);
+  }
+
+  .btn-primary:active:not(:disabled) {
+    background-color: var(--color-accent-hover);
+  }
+
+  /* Neutral, bordered */
+  .btn-secondary {
+    background-color: var(--color-surface);
+    border-color: var(--color-border);
+    color: var(--color-ink);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .btn:hover:not(:disabled) {
+      background-color: var(--color-surface-hover);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background-color: var(--color-accent-hover);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background-color: var(--color-surface-hover);
+    }
   }
 
   .input {
-    @apply w-full px-3 py-2 rounded-lg border;
-    @apply bg-white dark:bg-gray-800;
-    @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
-    @apply transition-colors duration-150;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background-color: var(--color-surface);
+    color: var(--color-ink);
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    transition-property: background-color, border-color, color;
+    transition-duration: var(--dur-fast);
+    transition-timing-function: var(--ease-out);
+  }
+
+  .input:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 1px;
   }
 
   .card {
-    @apply bg-surface-light dark:bg-surface-dark rounded-xl border shadow-sm;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
   }
 
+  /* Range input. The thumb is ink, not accent: the accent budget is spent on
+     the focus ring and the primary action, and a slider is direct
+     manipulation, so it needs contrast rather than colour. No transition
+     anywhere - the thumb tracks the pointer one-to-one. */
   .slider {
-    @apply w-full h-2 rounded-full appearance-none cursor-pointer;
-    @apply bg-gray-200 dark:bg-gray-700;
+    width: 100%;
+    height: 0.5rem;
+    border-radius: 9999px;
+    appearance: none;
+    cursor: pointer;
+    background-color: var(--color-surface-sunken);
+  }
+
+  .slider:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
   }
 
   .slider::-webkit-slider-thumb {
-    @apply appearance-none w-4 h-4 rounded-full bg-blue-600 cursor-pointer;
+    appearance: none;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 9999px;
+    background-color: var(--color-ink);
+    cursor: pointer;
   }
 
   .slider::-moz-range-thumb {
-    @apply w-4 h-4 rounded-full bg-blue-600 cursor-pointer border-0;
+    width: 1rem;
+    height: 1rem;
+    border: 0;
+    border-radius: 9999px;
+    background-color: var(--color-ink);
+    cursor: pointer;
   }
+}
+
+/* The data voice: every value the user reads or compares - pixel dimensions,
+   hex colours, percentages, file sizes, zoom level, keyboard hints, and the
+   <Framr /> wordmark. Tabular figures let a column of dimensions or a row of
+   hex values align, which is what a photographer actually scans for. Use this
+   utility instead of hand-rolling `font-mono tabular-nums`.
+
+   The value has to stand alone in its own element. A number inside a prose
+   label or a preset name keeps the chrome voice, and one label never carries
+   both faces - see rule 6 above. */
+@utility data-voice {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 @utility scrollbar-thin {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-gray-400) transparent;
+  scrollbar-color: var(--color-muted) transparent;
 
   &::-webkit-scrollbar {
     width: 6px;
@@ -90,29 +581,18 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    @apply bg-gray-400 dark:bg-gray-600 rounded-full;
+    background-color: var(--color-border);
+    border-radius: 9999px;
   }
 
   &::-webkit-scrollbar-thumb:hover {
-    @apply bg-gray-500 dark:bg-gray-500;
+    background-color: var(--color-muted);
   }
 }
 
-/* Drop zone animation */
-@keyframes pulse-border {
-  0%, 100% {
-    border-color: var(--color-blue-400);
-  }
-  50% {
-    border-color: var(--color-blue-600);
-  }
-}
-
-.drop-zone-active {
-  animation: pulse-border 1s ease-in-out infinite;
-}
-
-/* Checkerboard pattern for transparency preview */
+/* Checkerboard pattern for transparency preview. Intentionally outside the
+   chrome palette: it is a transparency indicator, not a surface, and it must
+   read the same regardless of theme tint. */
 .checkerboard {
   background-image:
     linear-gradient(45deg, #e0e0e0 25%, transparent 25%),
@@ -120,7 +600,11 @@
     linear-gradient(45deg, transparent 75%, #e0e0e0 75%),
     linear-gradient(-45deg, transparent 75%, #e0e0e0 75%);
   background-size: 16px 16px;
-  background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+  background-position:
+    0 0,
+    0 8px,
+    8px -8px,
+    -8px 0px;
 }
 
 .dark .checkerboard {
@@ -131,23 +615,53 @@
     linear-gradient(-45deg, transparent 75%, #333 75%);
 }
 
-/* Mobile drawer animations */
-@keyframes slide-up {
-  from {
-    transform: translateY(100%);
-  }
-  to {
-    transform: translateY(0);
-  }
-}
-
-.animate-slide-up {
-  animation: slide-up 0.3s ease-out;
-}
-
 /* Safe area padding for mobile devices with notches */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* ============================================================================
+   REDUCED MOTION
+
+   Removes all travel and scale. Retains colour, opacity, focus indicators, and
+   every selected or disabled state - a selected chip still changes colour, a
+   disabled button still dims, a focus ring is still instant.
+
+   Two things are deliberately NOT reduced:
+     - Functional motion. A progress bar or spinner conveys real progress, so
+       it keeps running. `animate-spin` is exempted by name below; mark any
+       other functional animation with `motion-functional`.
+     - Direct manipulation. Sliders, the compare handle, and queue-row drag
+       stay one-to-one with the user's hand; they carry no timed transition in
+       the first place, so nothing here reaches them. Only autonomous
+       post-release settling would be removed.
+
+   Unlayered, so it beats every Tailwind utility regardless of specificity.
+   ========================================================================= */
+@media (prefers-reduced-motion: reduce) {
+  /* Re-declaring transition-property drops transform, scale, height, and
+     grid-template-rows out of every transition list, so travel and size
+     changes land instantly - while colour and opacity keep their duration and
+     stay perceivable. Durations are untouched on purpose. `outline` is absent
+     here as everywhere: focus rings never transition. */
+  *:not(.motion-functional):not(.motion-functional *) {
+    transition-property:
+      color, background-color, border-color, text-decoration-color, fill,
+      stroke, opacity;
+  }
+
+  /* Autonomous animations stop. Functional ones keep running.
+     `.animate-spin` is exempted by name and not by opt-in: a spinner is the one
+     functional animation the framework itself generates, it is the only signal
+     that work is still in flight, and freezing it would report "stalled" to
+     exactly the users who asked for less motion. `.animate-pulse` is NOT
+     exempted - it decorates a selected row and carries no information.
+     Anything else whose motion is functional opts in with `motion-functional`. */
+  *:not(.motion-functional):not(.motion-functional *):not(.animate-spin) {
+    animation-duration: 1ms;
+    animation-iteration-count: 1;
+    animation-delay: 0ms;
   }
 }
