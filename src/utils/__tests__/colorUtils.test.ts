@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isValidHex, normalizeHex } from '../colorUtils';
+import { isValidHex, isCompleteHex, normalizeHex } from '../colorUtils';
 
 describe('isValidHex', () => {
   it('accepts a full hex with the hash', () => {
@@ -81,6 +81,44 @@ describe('normalizeHex', () => {
     for (const input of ['#112233', '112233', '#123', '123', 'aAbBcC', '#FfF']) {
       expect(isValidHex(input)).toBe(true);
       expect(normalizeHex(input)).toMatch(/^#[0-9A-F]{6}$/);
+    }
+  });
+});
+
+describe('isCompleteHex', () => {
+  it('accepts six digits with or without the hash', () => {
+    expect(isCompleteHex('112233')).toBe(true);
+    expect(isCompleteHex('#112233')).toBe(true);
+    expect(isCompleteHex('aAbBcC')).toBe(true);
+  });
+
+  // The whole point of the predicate. Every one of these is a prefix of a
+  // six-digit value someone is part way through typing, so committing it
+  // rewrites the field under them and the six digits can never be finished.
+  it('rejects shorthand, which is always also a prefix', () => {
+    expect(isCompleteHex('112')).toBe(false);
+    expect(isCompleteHex('#112')).toBe(false);
+    expect(isCompleteHex('fff')).toBe(false);
+    expect(isCompleteHex('#FfF')).toBe(false);
+  });
+
+  it('rejects every other partial and every overlong value', () => {
+    for (const input of ['', '#', '1', '#11', '1122', '11223', '#1122334', '11223344']) {
+      expect(isCompleteHex(input)).toBe(false);
+    }
+  });
+
+  it('rejects non-hex characters', () => {
+    expect(isCompleteHex('#GGGGGG')).toBe(false);
+    expect(isCompleteHex('rgb(0,0,0)')).toBe(false);
+    expect(isCompleteHex(' #112233')).toBe(false);
+  });
+
+  // A narrowing of isValidHex, never a widening: anything committed live has to
+  // survive the blur path unchanged.
+  it('is a strict subset of isValidHex', () => {
+    for (const input of ['112233', '#112233', 'aAbBcC', '112', '#112', 'fff', '1122', 'zzz', '']) {
+      if (isCompleteHex(input)) expect(isValidHex(input)).toBe(true);
     }
   });
 });

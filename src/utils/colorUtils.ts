@@ -27,6 +27,24 @@ export function isValidHex(color: string): boolean {
   return /^#?([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(color);
 }
 
+/**
+ * What may be committed *while the field is still being typed into*.
+ *
+ * Shorthand is deliberately excluded. A three-digit value is ambiguous mid-word:
+ * "112" is a complete shorthand and equally the first half of "112233", and the
+ * colour fields normalize whatever they accept and sync it back into the
+ * controlled input. Honouring shorthand on every keystroke therefore rewrote
+ * the field to "#111122" on the third character and the remaining digits landed
+ * on the end of that, so the six-digit value could never be typed - the exact
+ * entry making the '#' optional was meant to allow. Six digits is the only
+ * length that cannot be a prefix of something longer, so it is the only length
+ * that commits live; `isValidHex` still admits shorthand on blur, where the
+ * value is final and the ambiguity is gone.
+ */
+export function isCompleteHex(color: string): boolean {
+  return /^#?[A-Fa-f0-9]{6}$/.test(color);
+}
+
 /** Always returns `#RRGGBB`: shorthand expanded, '#' added, digits upper-cased. */
 export function normalizeHex(color: string): string {
   let hex = color.replace('#', '');

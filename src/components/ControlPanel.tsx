@@ -1,6 +1,6 @@
 import { useState, useCallback, useId, useRef } from 'react';
 import type { BorderSettings, BorderMode, ResizeSettings, OutputSettings, CanvasBackground, TextOverlaySettings } from '../types';
-import { PRESET_COLORS, CANVAS_BACKGROUND_COLORS, isValidHex, normalizeHex } from '../utils/colorUtils';
+import { PRESET_COLORS, CANVAS_BACKGROUND_COLORS, isValidHex, isCompleteHex, normalizeHex } from '../utils/colorUtils';
 import { GRADIENT_PRESETS, gradientToCss } from '../utils/gradientUtils';
 import { createGradientStop } from '../utils/constants';
 import { TextOverlayControls } from './TextOverlayControls';
@@ -126,7 +126,9 @@ export function ControlPanel({
 
   const handleColorChange = useCallback((color: string) => {
     setColorInput(color);
-    if (isValidHex(color)) {
+    // Live, so only a value that cannot be a prefix of a longer one - see
+    // `isCompleteHex`. Shorthand waits for the blur below.
+    if (isCompleteHex(color)) {
       onBorderChange({ ...borderSettings, color: normalizeHex(color) });
     }
   }, [borderSettings, onBorderChange]);
@@ -148,7 +150,7 @@ export function ControlPanel({
 
   const handleCanvasBgColorChange = useCallback((color: string) => {
     setCanvasBgInput(color);
-    if (isValidHex(color)) {
+    if (isCompleteHex(color)) {
       onCanvasBackgroundChange({ ...canvasBackground, color: normalizeHex(color) });
     }
   }, [canvasBackground, onCanvasBackgroundChange]);

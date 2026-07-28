@@ -13,7 +13,7 @@ import {
   isGenericFont,
 } from '../utils/fonts';
 import type { FontCategory } from '../utils/fonts';
-import { TEXT_COLOR_PRESETS, isValidHex, normalizeHex } from '../utils/colorUtils';
+import { TEXT_COLOR_PRESETS, isValidHex, isCompleteHex, normalizeHex } from '../utils/colorUtils';
 import { DATE_STAMP_FORMATS, formatDateStamp } from '../utils/dateFormat';
 import { useMountThroughExit } from './motion';
 import { Chip, ChipGroup, PositionGrid, Segment, Switch, cx } from './ui';
@@ -474,7 +474,9 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
                             value={overlayColorInput}
                             onChange={(e) => {
                               setOverlayColorInput(e.target.value);
-                              if (isValidHex(e.target.value)) {
+                              // Live, so six digits only - see `isCompleteHex`.
+                              // Shorthand commits on the blur below.
+                              if (isCompleteHex(e.target.value)) {
                                 onChange({ ...textOverlay, color: normalizeHex(e.target.value) });
                               }
                             }}
@@ -544,7 +546,7 @@ export function TextOverlayControls({ textOverlay, onChange, exifDate }: TextOve
                               value={shadowColorInput}
                               onChange={(e) => {
                                 setShadowColorInput(e.target.value);
-                                if (isValidHex(e.target.value)) {
+                                if (isCompleteHex(e.target.value)) {
                                   onChange({
                                     ...textOverlay,
                                     textShadow: { ...textOverlay.textShadow, color: normalizeHex(e.target.value) },

@@ -15,6 +15,34 @@ interface ImageQueueProps {
 /** How far a pointer travels before a press stops being a tap and becomes a reorder drag. */
 const DRAG_THRESHOLD_PX = 6;
 
+/* Edge autoscroll. Native drag-and-drop scrolls a container for free when the
+   pointer is held near its edge; Pointer Events do not, so a queue taller than
+   its viewport could only be reordered within the slice already on screen.
+   The band is deep enough to hit without precision and shallow enough to leave
+   the middle of a short list alone, and the speed ramps from nothing at the
+   band's inner edge to the cap at the boundary, so nudging into it creeps and
+   pushing right up to the edge moves at a useful rate. */
+const AUTOSCROLL_BAND_PX = 48;
+const AUTOSCROLL_MAX_PX_PER_FRAME = 14;
+
+/**
+ * Pixels to scroll this frame for a pointer at `clientY`, signed, or 0 when the
+ * pointer is clear of both bands. A pointer dragged past the edge entirely
+ * clamps to the cap rather than falling out of the band, so overshooting the
+ * list keeps scrolling instead of stopping dead.
+ */
+function autoScrollStep(scroller: HTMLElement, clientY: number): number {
+  const { top, bottom } = scroller.getBoundingClientRect();
+  const speed = (depth: number) =>
+    Math.ceil(
+      Math.min(1, Math.max(0, AUTOSCROLL_BAND_PX - depth) / AUTOSCROLL_BAND_PX) *
+        AUTOSCROLL_MAX_PX_PER_FRAME
+    );
+  if (clientY < top + AUTOSCROLL_BAND_PX) return -speed(clientY - top);
+  if (clientY > bottom - AUTOSCROLL_BAND_PX) return speed(bottom - clientY);
+  return 0;
+}
+
 /**
  * Reads a motion token off the document so the JavaScript that unmounts an
  * exiting row cannot drift from the CSS that fades it. Never hardcode a
@@ -117,10 +145,16 @@ export function ImageQueue({
     fromIndex: number;
     startX: number;
     startY: number;
+    // Where the pointer is now. The autoscroll frames below re-hit-test from
+    // these while the pointer is held still and the rows move underneath it.
+    clientX: number;
+    clientY: number;
     moved: boolean;
     imageId: string;
   } | null>(null);
   const dragOverRef = useRef<number | null>(null);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const autoScrollRef = useRef<number | null>(null);
   const [dragFromIndex, setDragFromIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndexState] = useState<number | null>(null);
 
@@ -129,16 +163,94 @@ export function ImageQueue({
     setDragOverIndexState(index);
   }, []);
 
+  /**
+   * The destination under a point, or none when the point is off the list.
+   *
+   * Leaving the list clears the destination, so releasing out there commits
+   * nothing - the escape hatch that cancels a drag. Inside the list is not the
+   * same thing: the scroller's own padding leaves a gutter at each end with no
+   * row in it, and that gutter is exactly where a drag heading for the first or
+   * last position comes to rest, doubly so now that holding there is also what
+   * scrolls the list. A point inside the box but off a row therefore resolves
+   * to the nearer end instead of to nothing.
+   */
+  const hitTest = useCallback(
+    (clientX: number, clientY: number) => {
+      const indexOf = (element: Element | null | undefined) => {
+        const parsed = Number.parseInt(element?.getAttribute('data-drag-index') ?? '', 10);
+        return Number.isNaN(parsed) ? null : parsed;
+      };
+
+      const under = document.elementFromPoint(clientX, clientY)?.closest('[data-drag-index]');
+      if (under) {
+        setDragOverIndex(indexOf(under));
+        return;
+      }
+
+      const scroller = scrollerRef.current;
+      const box = scroller?.getBoundingClientRect();
+      if (
+        !scroller ||
+        !box ||
+        clientX < box.left ||
+        clientX > box.right ||
+        clientY < box.top ||
+        clientY > box.bottom
+      ) {
+        setDragOverIndex(null);
+        return;
+      }
+
+      const rows = scroller.querySelectorAll('[data-drag-index]');
+      setDragOverIndex(indexOf(rows[clientY < box.top + box.height / 2 ? 0 : rows.length - 1]));
+    },
+    [setDragOverIndex]
+  );
+
+  const stopAutoScroll = useCallback(() => {
+    if (autoScrollRef.current === null) return;
+    cancelAnimationFrame(autoScrollRef.current);
+    autoScrollRef.current = null;
+  }, []);
+
+  /* Idempotent, and the frame re-arms only while the pointer stays in a band,
+     so a drag through the middle of the list costs no frames and a second call
+     while already scrolling is a no-op. Unmounting mid-drag clears
+     `scrollerRef` and the next frame bails, so there is nothing to tear down
+     beyond the `endDrag` funnel. */
+  const startAutoScroll = useCallback(() => {
+    if (autoScrollRef.current !== null) return;
+    const frame = () => {
+      autoScrollRef.current = null;
+      const drag = dragRef.current;
+      const scroller = scrollerRef.current;
+      if (!drag || !drag.moved || !scroller) return;
+
+      const step = autoScrollStep(scroller, drag.clientY);
+      if (step === 0) return;
+
+      const before = scroller.scrollTop;
+      scroller.scrollTop = before + step;
+      // The pointer has not moved, but the rows under it have, so the
+      // destination is stale until it is read again from the same coordinates.
+      if (scroller.scrollTop !== before) hitTest(drag.clientX, drag.clientY);
+
+      autoScrollRef.current = requestAnimationFrame(frame);
+    };
+    autoScrollRef.current = requestAnimationFrame(frame);
+  }, [hitTest]);
+
   const endDrag = useCallback(() => {
     const drag = dragRef.current;
     if (!drag) return;
     dragRef.current = null;
+    stopAutoScroll();
     if (drag.element.hasPointerCapture(drag.pointerId)) {
       drag.element.releasePointerCapture(drag.pointerId);
     }
     setDragFromIndex(null);
     setDragOverIndex(null);
-  }, [setDragOverIndex]);
+  }, [setDragOverIndex, stopAutoScroll]);
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>, image: ImageFile, index: number) => {
@@ -153,6 +265,8 @@ export function ImageQueue({
         fromIndex: index,
         startX: e.clientX,
         startY: e.clientY,
+        clientX: e.clientX,
+        clientY: e.clientY,
         moved: false,
         imageId: image.id,
       };
@@ -177,12 +291,21 @@ export function ImageQueue({
         setDragOverIndex(drag.fromIndex);
       }
 
-      const under = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-drag-index]');
-      const over = under ? Number.parseInt(under.getAttribute('data-drag-index') ?? '', 10) : Number.NaN;
-      // Off the list means no destination, so releasing there commits nothing.
-      setDragOverIndex(Number.isNaN(over) ? null : over);
+      drag.clientX = e.clientX;
+      drag.clientY = e.clientY;
+      hitTest(e.clientX, e.clientY);
+
+      // Held near an edge, the list scrolls under the pointer, so a destination
+      // below the fold is reachable without letting go. Started here rather
+      // than on every move so the frames only run while a band is occupied.
+      const scroller = scrollerRef.current;
+      if (scroller && autoScrollStep(scroller, e.clientY) !== 0) {
+        startAutoScroll();
+      } else {
+        stopAutoScroll();
+      }
     },
-    [setDragOverIndex]
+    [hitTest, setDragOverIndex, startAutoScroll, stopAutoScroll]
   );
 
   const handlePointerUp = useCallback(
@@ -397,6 +520,7 @@ export function ImageQueue({
       </div>
 
       <div
+        ref={scrollerRef}
         role="listbox"
         aria-labelledby={headingId}
         className="flex-1 overflow-y-auto scrollbar-thin p-2"
