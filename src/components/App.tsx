@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { AspectRatio, ImageFile, BorderSettings, ResizeSettings, OutputSettings, ProcessingResult, CanvasBackground, Toast, ToastVariant, TextOverlaySettings } from '../types';
 import { createImageFile, checkMemoryWarning, cleanupImageResources } from '../utils/imageUtils';
 import { DEFAULT_BORDER_SETTINGS } from '../utils/constants';
@@ -82,6 +82,8 @@ export default function App() {
   const [isImagesDrawerOpen, setIsImagesDrawerOpen] = useState(false);
   const [isControlsDrawerOpen, setIsControlsDrawerOpen] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [processAnnouncement, setProcessAnnouncement] = useState('');
+  const emptyDropZoneRef = useRef<HTMLDivElement>(null);
 
   const addToast = useCallback((message: string, variant: ToastVariant = 'info') => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -211,6 +213,9 @@ export default function App() {
     };
 
     let errorCount = 0;
+    // Cleared first, so a second run over the same batch is a change to the
+    // live region rather than the identical string it already holds.
+    setProcessAnnouncement('');
 
     await processImages(
       pendingImages,
@@ -242,6 +247,22 @@ export default function App() {
         'error'
       );
     }
+
+    /* "In front of the user" is a sighted reading of it. The row's `done` mark
+       is an unlabelled glyph and the queue's only live region carries reorder
+       messages, so with the toast gone a screen reader got no completion news
+       at all - and SPEC 7 asks for screen reader support. The count goes to the
+       sr-only region below instead of back into the toast stack, which keeps
+       the interface visually quiet and still says the thing that matters. */
+    const processedCount = pendingImages.length - errorCount;
+    if (processedCount > 0) {
+      const plural = processedCount !== 1 ? 's' : '';
+      setProcessAnnouncement(
+        errorCount > 0
+          ? `${processedCount} of ${pendingImages.length} images processed. Downloads ready.`
+          : `${processedCount} image${plural} processed. Downloads ready.`
+      );
+    }
   }, [images, borderSettings, resizeSettings, outputSettings, targetAspectRatio, textOverlay, processImages, addToast]);
 
   const handleCancel = useCallback(() => {
@@ -254,6 +275,21 @@ export default function App() {
   }, [cancelProcessing]);
 
   const hasImages = images.length > 0;
+
+  /* Emptying the queue unmounts whatever held focus - the row the user pressed
+     Delete on, and on mobile the drawer around it and the bar button that
+     opened it - so focus fell to the body and a keyboard user had to walk back
+     in from the page header. The row handler can only hand focus to a
+     neighbouring row, and removing the last image leaves none, so the handoff
+     belongs here, at the boundary that swaps the queue for the empty state.
+     The drop zone is the only control left standing and the one place a new
+     file comes from. */
+  const hadImagesRef = useRef(hasImages);
+  useEffect(() => {
+    const had = hadImagesRef.current;
+    hadImagesRef.current = hasImages;
+    if (had && !hasImages) emptyDropZoneRef.current?.focus();
+  }, [hasImages]);
 
   const handleNavigate = useCallback((direction: 'up' | 'down') => {
     if (images.length === 0) return;
@@ -324,7 +360,11 @@ export default function App() {
           <div className="flex-1 overflow-y-auto scrollbar-thin">
             <div className="flex min-h-full items-center justify-center p-4 md:p-8">
               <div className="w-full max-w-2xl">
-                <DropZone onFilesSelected={handleFilesSelected} hasImages={false} />
+                <DropZone
+                  ref={emptyDropZoneRef}
+                  onFilesSelected={handleFilesSelected}
+                  hasImages={false}
+                />
               </div>
             </div>
           </div>
@@ -524,6 +564,14 @@ export default function App() {
       </main>
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
+
+      {/* A batch finishing is only ever drawn - the row's `done` mark carries no
+          text - so this is where it gets said. Mounted empty from the start,
+          the same reason the queue's reorder region is: a live region that
+          arrives in the same commit as its text is often missed entirely. */}
+      <div role="status" aria-live="polite" className="sr-only">
+        {processAnnouncement}
+      </div>
 
       <footer className={`hidden md:block py-2 px-4 border-t border-border text-center text-xs text-muted bg-surface ${THEME_CROSSFADE}`}>
         Framr - Add borders to your images. All processing happens in your browser.

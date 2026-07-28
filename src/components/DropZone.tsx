@@ -6,6 +6,8 @@ interface DropZoneProps {
   onFilesSelected: (files: File[]) => void;
   disabled?: boolean;
   hasImages?: boolean;
+  /** The drop target itself, so a caller can move focus here. */
+  ref?: React.Ref<HTMLDivElement>;
 }
 
 /**
@@ -19,7 +21,7 @@ interface DropZoneProps {
  * infinite border pulse, which pulled the eye for as long as a file was held
  * over the window and told the user nothing the first frame had not.
  */
-export function DropZone({ onFilesSelected, disabled = false, hasImages = false }: DropZoneProps) {
+export function DropZone({ onFilesSelected, disabled = false, hasImages = false, ref }: DropZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [dragCount, setDragCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -147,6 +149,7 @@ export function DropZone({ onFilesSelected, disabled = false, hasImages = false 
   );
 
   const sharedHandlers = {
+    ref,
     onDragEnter: handleDragEnter,
     onDragLeave: handleDragLeave,
     onDragOver: handleDragOver,
